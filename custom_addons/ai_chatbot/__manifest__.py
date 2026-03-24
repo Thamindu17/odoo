@@ -9,6 +9,11 @@
     'assets': {
         'web.assets_frontend': [
             'ai_chatbot/static/src/js/chatbot.js',
+            'ai_chatbot/static/src/js/chatbot_init.js',
+        ],
+        'web.assets_frontend_minimal': [
+            'ai_chatbot/static/src/js/chatbot.js',
+            'ai_chatbot/static/src/js/chatbot_init.js',
         ],
     },
     'installable': True,
