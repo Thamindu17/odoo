@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatBot UI Test Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f2eba 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 60px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #333;
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 50px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .feature {
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .feature h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .feature p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .demo-section {
+            background: #f0f4ff;
+            padding: 40px;
+            border-radius: 12px;
+            margin-top: 40px;
+        }
+
+        .demo-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .demo-section p {
+            color: #666;
+            text-align: center;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        .highlight {
+            color: #50fa7b;
+        }
+
+        .chat-trigger {
+            position: fixed;
+            bottom: 100px;
+            right: 100px;
+            background: #667eea;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 30px;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            z-index: 9998;
+        }
+
+        .chat-trigger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .chat-trigger {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AstraAI ChatBot Demo</h1>
+        <p class="subtitle">A lightweight, feature-rich, embeddable chat UI element.</p>
+
+        <div class="features">
+            <div class="feature">
+                <h3>💬 Easy Integration</h3>
+                <p>Add a chat interface to any website with just a few lines of code.</p>
+            </div>
+            <div class="feature">
+                <h3>🎨 Customizable</h3>
+                <p>Configure colors, position, bot name, and more to match your brand.</p>
+            </div>
+            <div class="feature">
+                <h3>📱 Responsive</h3>
+                <p>Works seamlessly on desktop, tablet, and mobile devices.</p>
+            </div>
+            <div class="feature">
+                <h3>🚀 Vanilla JS</h3>
+                <p>No dependencies, no framework required. Pure JavaScript.</p>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>Try It Out!</h2>
+            <p>Click the chat icon in the bottom right corner to start chatting with the bot.</p>
+            <p style="font-size: 0.9em; color: #999;">
+                (Make sure your FastAPI backend is running at http://localhost:8000)
+            </p>
+        </div>
+
+    <!-- Include the chatbot library -->
+    <script src="./chatbot.js"></script>
+
+    <!-- Initialize the chatbot -->
+    <script>
+        // Initialize with custom configuration
+        const chatbot = new SimpleChatBot({
+            apiUrl: 'http://localhost:8000',
+            primaryColor: '#0f2eba',
+            botName: 'Company Manager Assistant',
+            placeholder: 'Ask me anything...',
+            position: 'bottom-right'
+        });
+    </script>
+</body>
+</html>
