@@ -10,7 +10,7 @@
     }
 
     new SimpleChatBot({
-      apiUrl: 'http://localhost:8000',
+      apiUrl: 'http://127.0.0.1:9000',
       primaryColor: '#0f2eba',
       botName: 'Company Manager Assistant',
       placeholder: 'Ask me anything...',

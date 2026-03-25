@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .gemini_client import GeminiClient
@@ -19,6 +20,16 @@ from .schemas import (
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:8888",
+        "http://localhost:8888",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 odoo_client = OdooClient(settings)
 gemini_client = GeminiClient(settings)
 

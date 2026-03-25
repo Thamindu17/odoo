@@ -1,13 +1,13 @@
 /**
  * AsthraAI ChatBot - A lightweight, embeddable chat UI library
- * Usage: new SimpleChatBot({ apiUrl: 'http://localhost:8000' })
+ * Usage: new SimpleChatBot({ apiUrl: 'http://127.0.0.1:9000' })
  * 
  * Features: Text, Tables, Charts (Plotly), Analytics, Reports, CSV Export
  */
 class SimpleChatBot {
   constructor(config = {}) {
     this.config = {
-      apiUrl: config.apiUrl || 'http://localhost:8000',
+      apiUrl: config.apiUrl || 'http://127.0.0.1:9000',
       primaryColor: config.primaryColor || '#007bff',
       botName: config.botName || 'Assistant',
       placeholder: config.placeholder || 'Type a message...',
@@ -939,13 +939,12 @@ class SimpleChatBot {
     this.conversationHistory.push({ role: 'user', content: message });
 
     try {
-      // Call /chat/ endpoint (full metadata) instead of /chat/simple (text only)
-      const response = await fetch(`${this.config.apiUrl}/chat/`, {
+      // Call backend chat endpoint
+      const response = await fetch(`${this.config.apiUrl}/chat/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: message,
-          conversation_history: this.conversationHistory.slice(-6)
+          message: message
         })
       });
 
@@ -955,7 +954,7 @@ class SimpleChatBot {
       this.hideTyping();
 
       // Track assistant response
-      this.conversationHistory.push({ role: 'assistant', content: data.answer || '' });
+      this.conversationHistory.push({ role: 'assistant', content: data.response || data.answer || '' });
 
       // Check if response has any rich content
       const hasRich = data.visualizations || data.analytics || data.report ||
