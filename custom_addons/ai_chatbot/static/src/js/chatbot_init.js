@@ -12,7 +12,7 @@
     new SimpleChatBot({
       apiUrl: 'http://127.0.0.1:9000',
       primaryColor: '#0f2eba',
-      botName: 'Company Manager Assistant',
+      botName: 'Chat Assistant',
       placeholder: 'Ask me anything...',
       position: 'bottom-right'
     });

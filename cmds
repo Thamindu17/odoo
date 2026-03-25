@@ -1,13 +1,34 @@
-python .\odoo-bin -d odoo19_dev --db_host=127.0.0.1 --db_port=5432 --db_user=odoo --db_password=odoo --addons-path=addons,custom_addons --http-interface=127.0.0.1
+Docker-first workflow (Windows PowerShell)
 
-http://127.0.0.1:8069
+URLs
+- Odoo: http://127.0.0.1:8888
+- Backend: http://127.0.0.1:9000
 
-
-
-
-python .\odoo-bin -d odoo19_dev -i base --without-demo=all --stop-after-init --db_host=127.0.0.1 --db_port=5432 --db_user=odoo --db_password=odoo --addons-path=addons,custom_addons --http-interface=127.0.0.1
-
-uvicorn chatbot_backend.main:app --reload --port 8000
-
-
+1) Start containers
 docker compose up -d
+
+2) Start chatbot backend (host terminal)
+uvicorn chatbot_backend.main:app --reload --host 127.0.0.1 --port 9000
+
+3) Update chatbot module in Docker Odoo (copy-paste this as one line)
+docker compose exec odoo odoo -d odoo19_dev -u ai_chatbot --stop-after-init --db_host=db --db_port=5432 --db_user=odoo --db_password=odoo
+
+4) Restart Odoo container to serve rebuilt assets
+docker compose restart odoo
+
+5) Verify running services
+docker compose ps
+
+6) Browser refresh for frontend assets
+Open: http://127.0.0.1:8888/web?debug=assets
+Then hard refresh: Ctrl+F5
+
+One-shot update cycle (copy-paste this whole block)
+docker compose up -d
+docker compose exec odoo odoo -d odoo19_dev -u ai_chatbot --stop-after-init --db_host=db --db_port=5432 --db_user=odoo --db_password=odoo
+docker compose restart odoo
+docker compose ps
+
+Optional check: show current chatbot title from source
+Get-Content .\custom_addons\ai_chatbot\static\src\js\chatbot_init.js | Select-String "botName"
+
