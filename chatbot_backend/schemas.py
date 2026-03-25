@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class HealthResponse(BaseModel):
@@ -54,6 +54,13 @@ class LeadResult(BaseModel):
     phone: str | None = None
     expected_revenue: float | None = None
     active: bool | None = None
+
+    @field_validator("email_from", "phone", mode="before")
+    @classmethod
+    def _coerce_false_to_none(cls, value: Any) -> Any:
+        if value is False:
+            return None
+        return value
 
 
 class ChatRequest(BaseModel):
