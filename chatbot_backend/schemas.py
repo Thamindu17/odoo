@@ -3,6 +3,21 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
 
+def _normalize_priority(value: Any) -> str | None:
+    if value in (None, False, "", "null"):
+        return None
+
+    if isinstance(value, int):
+        value = str(value)
+
+    if isinstance(value, str):
+        value = value.strip()
+        if value in {"0", "1", "2", "3"}:
+            return value
+
+    raise ValueError("priority must be one of 0, 1, 2, 3")
+
+
 class HealthResponse(BaseModel):
     status: str
     service: str
@@ -20,6 +35,11 @@ class LeadCreateRequest(BaseModel):
     user_id: int | None = None
     stage_id: int | None = None
 
+    @field_validator("priority", mode="before")
+    @classmethod
+    def _coerce_priority(cls, value: Any) -> str | None:
+        return _normalize_priority(value)
+
 
 class LeadUpdateRequest(BaseModel):
     lead_id: int
@@ -33,6 +53,11 @@ class LeadUpdateRequest(BaseModel):
     user_id: int | None = None
     stage_id: int | None = None
 
+    @field_validator("priority", mode="before")
+    @classmethod
+    def _coerce_priority(cls, value: Any) -> str | None:
+        return _normalize_priority(value)
+
 
 class LeadArchiveRequest(BaseModel):
     lead_id: int
@@ -43,6 +68,11 @@ class LeadListRequest(BaseModel):
     stage_id: int | None = None
     priority: str | None = None
     limit: int = Field(default=10, ge=1, le=100)
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def _coerce_priority(cls, value: Any) -> str | None:
+        return _normalize_priority(value)
 
 
 class LeadResult(BaseModel):
