@@ -170,6 +170,13 @@ def _execute_action(action: ActionEnvelope) -> ChatResponse:
         )
 
     if name == "archive_lead":
+        if "lead_id" not in payload:
+            lead_name = payload.get("lead_name") or payload.get("name") or payload.get("name_contains")
+            if lead_name:
+                payload = dict(payload)
+                payload["lead_id"] = _resolve_lead_id(str(lead_name))
+                payload.pop("lead_name", None)
+
         req = LeadArchiveRequest(**payload)
         result = archive_lead(req)
         return ChatResponse(
