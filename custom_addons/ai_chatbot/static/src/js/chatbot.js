@@ -558,7 +558,7 @@ class SimpleChatBot {
     content.className = 'chatbot-message-content chatbot-rich-content';
 
     // 1. Text answer (with markdown support)
-    const answer = data.answer || '';
+    const answer = data.answer || data.response || '';
     if (answer) {
       const textDiv = document.createElement('div');
       textDiv.style.cssText = 'line-height:1.55; margin-bottom:8px;';
@@ -634,6 +634,18 @@ class SimpleChatBot {
           }
         }
       });
+    }
+
+    // 5b. CRM list records from chatbot_backend/main.py ChatResponse.details.records
+    const records = data && data.details && Array.isArray(data.details.records) ? data.details.records : [];
+    if (records.length > 0) {
+      const label = document.createElement('div');
+      label.className = 'cb-section-label';
+      label.textContent = `📋 Lead Results (${records.length} rows)`;
+      content.appendChild(label);
+
+      content.appendChild(this._buildTable(records));
+      content.appendChild(this._buildCSVBtn(records));
     }
 
     // 6. Report download
@@ -948,7 +960,18 @@ class SimpleChatBot {
         })
       });
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        let detail = `HTTP ${response.status}`;
+        try {
+          const errData = await response.json();
+          if (errData && errData.detail) {
+            detail = errData.detail;
+          }
+        } catch (_parseErr) {
+          // Keep fallback HTTP status when error body is not JSON.
+        }
+        throw new Error(detail);
+      }
 
       const data = await response.json();
       this.hideTyping();
@@ -958,7 +981,8 @@ class SimpleChatBot {
 
       // Check if response has any rich content
       const hasRich = data.visualizations || data.analytics || data.report ||
-        (data.references && data.references.some(r => r.type === 'sql' && r.data && r.data.length > 0));
+        (data.references && data.references.some(r => r.type === 'sql' && r.data && r.data.length > 0)) ||
+        (data.details && Array.isArray(data.details.records) && data.details.records.length > 0);
 
       console.log('Response data:', { hasViz: !!data.visualizations, hasAnalytics: !!data.analytics, hasReport: !!data.report });
 
@@ -971,7 +995,8 @@ class SimpleChatBot {
 
     } catch (error) {
       this.hideTyping();
-      this.addBotMessage('Sorry, I encountered an error. Please try again.');
+      const errMsg = error && error.message ? error.message : 'Unknown error';
+      this.addBotMessage(`Sorry, I encountered an error: ${errMsg}`);
       console.error('Chat error:', error);
     } finally {
       this.elements.send.disabled = false;

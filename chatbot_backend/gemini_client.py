@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 import requests
+from requests.exceptions import RequestException
 
 from .config import Settings
 
@@ -36,6 +37,33 @@ class GeminiClient:
             return json.loads(match.group(0))
         except json.JSONDecodeError:
             return {"action": "unknown", "payload": {}}
+
+    def _infer_with_rules(self, message: str) -> dict[str, Any]:
+        text = message.strip()
+        lower = text.lower()
+
+        latest = re.search(r"(?:latest|last)\s+(\d+)\s+leads", lower)
+        if latest:
+            return {"action": "list_leads", "payload": {"limit": int(latest.group(1))}}
+
+        if re.search(r"(?:latest|last)\s+leads", lower):
+            return {"action": "list_leads", "payload": {"limit": 5}}
+
+        update_revenue = re.search(
+            r"update\s+lead\s+(.+?)\s+and\s+set\s+expected\s+revenue\s+to\s+([0-9]+(?:\.[0-9]+)?)",
+            text,
+            flags=re.IGNORECASE,
+        )
+        if update_revenue:
+            return {
+                "action": "update_lead",
+                "payload": {
+                    "lead_name": update_revenue.group(1).strip(),
+                    "expected_revenue": float(update_revenue.group(2)),
+                },
+            }
+
+        return {"action": "unknown", "payload": {}}
 
     def _infer_with_gemini(self, message: str) -> dict[str, Any]:
         if not self.settings.gemini_api_key:
@@ -107,13 +135,18 @@ class GeminiClient:
 
     def infer_action(self, message: str) -> dict[str, Any]:
         provider = self.settings.llm_provider.strip().lower()
-        if provider == "openai-compatible":
-            parsed = self._infer_with_openai_compatible(message)
-        else:
-            parsed = self._infer_with_gemini(message)
+        try:
+            if provider == "openai-compatible":
+                parsed = self._infer_with_openai_compatible(message)
+            else:
+                parsed = self._infer_with_gemini(message)
+        except (RequestException, ValueError):
+            parsed = self._infer_with_rules(message)
 
         if "action" not in parsed:
-            return {"action": "unknown", "payload": {}}
+            return self._infer_with_rules(message)
         if "payload" not in parsed or not isinstance(parsed["payload"], dict):
             parsed["payload"] = {}
+        if parsed.get("action") == "unknown":
+            return self._infer_with_rules(message)
         return parsed

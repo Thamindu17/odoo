@@ -71,6 +71,13 @@ def _build_domain(payload: LeadListRequest) -> list[list]:
     return domain
 
 
+def _resolve_lead_id(lead_name: str) -> int:
+    leads = odoo_client.list_leads([["name", "ilike", lead_name], ["active", "=", True]], ["id", "name"], 1)
+    if not leads:
+        raise HTTPException(status_code=404, detail=f"Lead not found by name: {lead_name}")
+    return int(leads[0]["id"])
+
+
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse(status="ok", service=settings.app_name, env=settings.app_env)
@@ -147,6 +154,13 @@ def _execute_action(action: ActionEnvelope) -> ChatResponse:
         )
 
     if name == "update_lead":
+        if "lead_id" not in payload:
+            lead_name = payload.get("lead_name") or payload.get("name_contains")
+            if lead_name:
+                payload = dict(payload)
+                payload["lead_id"] = _resolve_lead_id(str(lead_name))
+                payload.pop("lead_name", None)
+
         req = LeadUpdateRequest(**payload)
         result = update_lead(req)
         return ChatResponse(
