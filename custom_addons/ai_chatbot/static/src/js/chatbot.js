@@ -11,6 +11,8 @@ class SimpleChatBot {
       primaryColor: config.primaryColor || '#007bff',
       botName: config.botName || 'Assistant',
       placeholder: config.placeholder || 'Type a message...',
+      currentUserName: config.currentUserName || '',
+      welcomeMessage: config.welcomeMessage || '',
       position: config.position || 'bottom-right', // bottom-right, bottom-left
       ...config
     };
@@ -524,12 +526,23 @@ class SimpleChatBot {
     this.elements.window.classList.toggle('open', this.isOpen);
     
     if (this.isOpen && this.elements.messages.children.length === 0) {
-      this.addBotMessage('Hi! How can I help you today?');
+      this.addBotMessage(this.getWelcomeMessage());
     }
     
     if (this.isOpen) {
       this.elements.input.focus();
     }
+  }
+
+  getWelcomeMessage() {
+    const userName = (this.config.currentUserName || '').trim();
+    if (userName) {
+      return `Hi ${userName}! How can I help you today?`;
+    }
+    if (this.config.welcomeMessage) {
+      return this.config.welcomeMessage;
+    }
+    return 'Hi! How can I help you today?';
   }
 
   // ===== Simple text message (user + fallback) =====
