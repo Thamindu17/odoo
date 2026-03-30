@@ -41,6 +41,7 @@ Happy-path prompts
 Create a lead for John Carter from BlueWave, email john@bluewave.com, phone +1 555 100 2001, expected revenue 25000.
 Add a new CRM lead: Sarah Khan at Orbit Tech, interested in ERP implementation, expected revenue 12000.
 Show me the latest 5 leads.
+
 List open opportunities with expected revenue above 10000.
 Update lead John Carter and set expected revenue to 30000.
 Change Sarah Khan phone number to +1 555 777 8888.
