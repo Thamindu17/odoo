@@ -537,7 +537,7 @@ class SimpleChatBot {
   getWelcomeMessage() {
     const userName = (this.config.currentUserName || '').trim();
     if (userName) {
-      return `Hi ${userName}! How can I help you today?`;
+      return `Hi ${userName}! Welcome to Ruhunu Hospital!`;
     }
     if (this.config.welcomeMessage) {
       return this.config.welcomeMessage;
