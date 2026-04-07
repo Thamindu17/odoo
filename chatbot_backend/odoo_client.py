@@ -96,3 +96,50 @@ class OdooClient:
                 filtered.append(row)
 
         return filtered
+
+    def get_partner_profile(self, partner_id: int) -> dict[str, Any] | None:
+        fields = ["id", "name", "hp_first_name", "hp_last_name", "phone", "hp_whatsapp"]
+        try:
+            rows = self.execute("res.partner", "search_read", [["id", "=", partner_id]], fields=fields, limit=1)
+        except Exception:
+            rows = self.execute("res.partner", "search_read", [["id", "=", partner_id]], fields=["id", "name"], limit=1)
+        if not rows:
+            return None
+        return rows[0]
+
+    def get_latest_active_lead_for_partner(self, partner_id: int) -> dict[str, Any] | None:
+        domain = [
+            ["partner_id", "=", partner_id],
+            ["active", "=", True],
+            ["stage_id.is_won", "=", False],
+            ["stage_id.name", "not ilike", "lost"],
+        ]
+        fields = ["id", "name", "user_id", "stage_id", "ruhunu_lead_category_id", "create_date"]
+
+        try:
+            rows = self.execute("crm.lead", "search_read", domain, fields=fields, order="create_date desc", limit=1)
+        except Exception:
+            fallback_fields = ["id", "name", "user_id", "stage_id", "create_date"]
+            rows = self.execute(
+                "crm.lead",
+                "search_read",
+                domain,
+                fields=fallback_fields,
+                order="create_date desc",
+                limit=1,
+            )
+
+        if not rows:
+            return None
+        return rows[0]
+
+    def post_lead_chatter_note(self, lead_id: int, message: str) -> bool:
+        result = self.execute(
+            "crm.lead",
+            "message_post",
+            [lead_id],
+            body=message,
+            message_type="comment",
+            subtype_xmlid="mail.mt_comment",
+        )
+        return bool(result)

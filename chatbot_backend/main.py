@@ -3,11 +3,14 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from .active_lead_routing import check_existing_client_active_lead
 from .client_identification import identify_client
 from .config import get_settings
 from .gemini_client import GeminiClient
 from .odoo_client import OdooClient
 from .schemas import (
+    ActiveLeadCheckRequest,
+    ActiveLeadCheckResponse,
     ActionEnvelope,
     ChatRequest,
     ChatResponse,
@@ -147,6 +150,22 @@ def qualification_identify(req: ClientIdentificationRequest) -> ClientIdentifica
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return ClientIdentificationResponse(**result)
+
+
+@app.post("/qualification/active-lead-check", response_model=ActiveLeadCheckResponse)
+def qualification_active_lead_check(req: ActiveLeadCheckRequest) -> ActiveLeadCheckResponse:
+    try:
+        result = check_existing_client_active_lead(
+            partner_id=req.partner_id,
+            channel_name=req.channel_name,
+            get_partner=odoo_client.get_partner_profile,
+            get_latest_active_lead=odoo_client.get_latest_active_lead_for_partner,
+            post_lead_chatter=odoo_client.post_lead_chatter_note,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return ActiveLeadCheckResponse(**result)
 
 
 def _execute_action(action: ActionEnvelope) -> ChatResponse:

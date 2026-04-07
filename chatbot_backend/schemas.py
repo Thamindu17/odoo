@@ -124,3 +124,19 @@ class ClientIdentificationResponse(BaseModel):
     partner_count: int
     partner: dict[str, Any] | None = None
     matched_partners: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ActiveLeadCheckRequest(BaseModel):
+    partner_id: int = Field(ge=1)
+    channel_name: str = Field(default="internal_test", min_length=1)
+
+
+class ActiveLeadCheckResponse(BaseModel):
+    status: str
+    next_step: str
+    client_message: str
+    has_active_lead: bool
+    lead: dict[str, Any] | None = None
+    agent_name: str | None = None
+    notification_posted: bool = False
+    end_conversation: bool = False

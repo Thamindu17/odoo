@@ -17,6 +17,7 @@ Run
 Endpoints
 - GET /health
 - POST /qualification/identify
+- POST /qualification/active-lead-check
 - POST /crm/create
 - POST /crm/list
 - POST /crm/update
@@ -37,6 +38,17 @@ Section 3.1 Test (without WhatsApp API)
     "provided_phone": "0712345678",
     "invalid_phone_attempts": 1
   }
+
+Section 3.2 Test (existing client active lead routing)
+- Use /qualification/active-lead-check after 3.1 returns existing_client and partner id.
+- Example payload:
+  {
+    "partner_id": 42,
+    "channel_name": "internal_test"
+  }
+- Expected outcomes:
+  - status=no_active_lead: continue requirement gathering
+  - status=active_lead_found: bot notifies agent in chatter and ends conversation
 
 Notes
 - Odoo API key is used as the XML-RPC password.
