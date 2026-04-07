@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from .client_identification import identify_client
 from .config import get_settings
 from .gemini_client import GeminiClient
 from .odoo_client import OdooClient
@@ -10,6 +11,8 @@ from .schemas import (
     ActionEnvelope,
     ChatRequest,
     ChatResponse,
+    ClientIdentificationRequest,
+    ClientIdentificationResponse,
     HealthResponse,
     LeadArchiveRequest,
     LeadCreateRequest,
@@ -129,6 +132,21 @@ def archive_lead(req: LeadArchiveRequest) -> dict:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return {"archived": bool(ok), "lead_id": req.lead_id}
+
+
+@app.post("/qualification/identify", response_model=ClientIdentificationResponse)
+def qualification_identify(req: ClientIdentificationRequest) -> ClientIdentificationResponse:
+    try:
+        result = identify_client(
+            metadata_phone=req.metadata_phone,
+            provided_phone=req.provided_phone,
+            invalid_phone_attempts=req.invalid_phone_attempts,
+            search_partners_by_phone=odoo_client.search_individual_partners_by_phone,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return ClientIdentificationResponse(**result)
 
 
 def _execute_action(action: ActionEnvelope) -> ChatResponse:

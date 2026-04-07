@@ -106,3 +106,21 @@ class ChatResponse(BaseModel):
 class ActionEnvelope(BaseModel):
     action: str
     payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class ClientIdentificationRequest(BaseModel):
+    channel_name: str = Field(default="internal_test", min_length=1)
+    metadata_phone: str | None = None
+    provided_phone: str | None = None
+    invalid_phone_attempts: int = Field(default=0, ge=0, le=5)
+
+
+class ClientIdentificationResponse(BaseModel):
+    status: str
+    next_step: str
+    message: str
+    invalid_phone_attempts: int
+    normalized_phone: str | None = None
+    partner_count: int
+    partner: dict[str, Any] | None = None
+    matched_partners: list[dict[str, Any]] = Field(default_factory=list)

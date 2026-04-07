@@ -124,7 +124,7 @@ class GeminiClient:
         if not self.settings.gemini_api_key:
             return {"action": "unknown", "payload": {}}
 
-        model = self.settings.llm_model or self.settings.gemini_model
+        model = self.settings.gemini_model
         endpoint = (
             f"https://generativelanguage.googleapis.com/v1beta/models/"
             f"{model}:generateContent?key={self.settings.gemini_api_key}"
@@ -157,45 +157,10 @@ class GeminiClient:
         text = "\n".join(p.get("text", "") for p in parts)
         return self._extract_json(text)
 
-    def _infer_with_openai_compatible(self, message: str) -> dict[str, Any]:
-        if not self.settings.llm_api_key:
-            return {"action": "unknown", "payload": {}}
-        if not self.settings.llm_model:
-            raise ValueError("LLM_MODEL is required for openai-compatible provider")
-
-        endpoint = f"{self.settings.llm_base_url.rstrip('/')}/chat/completions"
-        body = {
-            "model": self.settings.llm_model,
-            "temperature": 0.1,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": message},
-            ],
-        }
-        headers = {
-            "Authorization": f"Bearer {self.settings.llm_api_key}",
-            "Content-Type": "application/json",
-        }
-
-        response = requests.post(endpoint, json=body, headers=headers, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-
-        choices = data.get("choices", [])
-        if not choices:
-            return {"action": "unknown", "payload": {}}
-
-        text = choices[0].get("message", {}).get("content", "")
-        return self._extract_json(text)
-
     def infer_action(self, message: str) -> dict[str, Any]:
-        provider = self.settings.llm_provider.strip().lower()
         try:
-            if provider == "openai-compatible":
-                parsed = self._infer_with_openai_compatible(message)
-            else:
-                parsed = self._infer_with_gemini(message)
-        except (RequestException, ValueError):
+            parsed = self._infer_with_gemini(message)
+        except RequestException:
             parsed = self._infer_with_rules(message)
 
         if "action" not in parsed:

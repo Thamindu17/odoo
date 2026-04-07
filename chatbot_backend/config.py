@@ -33,11 +33,6 @@ class Settings:
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
     gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
-    llm_provider: str = os.getenv("LLM_PROVIDER", "gemini")
-    llm_base_url: str = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
-    llm_api_key: str = os.getenv("LLM_API_KEY", "")
-    llm_model: str = os.getenv("LLM_MODEL", "")
-
 
 def get_settings() -> Settings:
     return Settings()
