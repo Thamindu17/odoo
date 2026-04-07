@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── List View ─────────────────────────────────────────────────────── -->
+    <record id="ruhunu_occupation_view_list" model="ir.ui.view">
+        <field name="name">ruhunu.occupation.list</field>
+        <field name="model">ruhunu.occupation</field>
+        <field name="arch" type="xml">
+            <list string="Occupations" editable="bottom">
+                <field name="name"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── Form View ─────────────────────────────────────────────────────── -->
+    <record id="ruhunu_occupation_view_form" model="ir.ui.view">
+        <field name="name">ruhunu.occupation.form</field>
+        <field name="model">ruhunu.occupation</field>
+        <field name="arch" type="xml">
+            <form string="Occupation">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Window Action ─────────────────────────────────────────────────── -->
+    <record id="ruhunu_occupation_action" model="ir.actions.act_window">
+        <field name="name">Occupations</field>
+        <field name="res_model">ruhunu.occupation</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add an occupation</p>
+        </field>
+    </record>
+
+    <!-- ── Menu Item ─────────────────────────────────────────────────────── -->
+    <menuitem
+        id="ruhunu_menu_occupation"
+        name="Occupations"
+        parent="ruhunu_menu_config"
+        action="ruhunu_occupation_action"
+        sequence="40"
+        groups="sales_team.group_sale_manager"/>
+
+</odoo>

@@ -1,0 +1,483 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+    ╔══════════════════════════════════════════════════════════════════════════╗
+    ║  Ruhunu Custom Lead — CRM Lead Form Extension                           ║
+    ║                                                                          ║
+    ║  Inherits: crm.crm_lead_view_form  (the canonical Odoo 19 form view)    ║
+    ║                                                                          ║
+    ║  Odoo 19 note: the CRM form does NOT use <sheet>. All injection uses     ║
+    ║  the stable //div[hasclass('oe_title')] anchor.                          ║
+    ║                                                                          ║
+    ║  Section sequence (as required):                                         ║
+    ║    1. Lead Opportunity Name/Title  ← already in base form (oe_title)     ║
+    ║    2. Lead Details                                                        ║
+    ║    3. Client Details                                                      ║
+    ║    4. Maternity Details  (visible only when category = "Maternity")       ║
+    ║    5. Client Follow Up Updates                                            ║
+    ║    6. Confirmation                                                        ║
+    ║    7. Closure                                                             ║
+    ╚══════════════════════════════════════════════════════════════════════════╝
+    -->
+    <record id="ruhunu_crm_lead_form_inherit" model="ir.ui.view">
+        <field name="name">crm.lead.form.ruhunu.inherit</field>
+        <field name="model">crm.lead</field>
+        <!-- Canonical Odoo 19 CRM lead form view -->
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+
+            <!--
+                Single injection point: everything goes AFTER the oe_title block.
+
+                The oe_title div is the most stable structural anchor in the CRM
+                form across Odoo 15/16/17/18/19.  It always contains the
+                opportunity name (h1 > field[@name='name']).
+
+                The two invisible technical fields are injected first so their
+                values are present in the DOM before any dependent invisible=
+                expression is evaluated by the form renderer.
+            -->
+            <xpath expr="//div[hasclass('oe_title')]" position="after">
+
+                <!-- ── Hidden technical helpers ─────────────────────────── -->
+                <!--
+                    ruhunu_is_maternity  → drives Maternity Details visibility
+                    ruhunu_is_lost_stage → drives Lost Reason mandatory state
+                    Both are stored-computed fields so the value is always
+                    available without an extra RPC.
+                -->
+                <field name="ruhunu_is_maternity"  invisible="1"/>
+                <field name="ruhunu_is_lost_stage" invisible="1"/>
+
+                <!-- ── 1. Lead Details ──────────────────────────────────── -->
+                <group string="Lead Details" name="ruhunu_lead_details">
+                    <field name="ruhunu_lead_source_id"/>
+                    <field name="ruhunu_lead_category_id"/>
+                    <field name="ruhunu_lead_summary" required="1"/>
+                    <field name="priority" string="Priority" widget="priority"/>
+                </group>
+
+                <!-- ── 2. Client Details ────────────────────────────────── -->
+                <group string="Client Details" name="ruhunu_client_details">
+
+                    <!--
+                        F5: partner_id is re-labelled "Client".
+                        domain restricts to individual contacts only (is_company=False).
+                        The domain on the field declaration in crm_lead.py already
+                        enforces this; we repeat it here for UI clarity.
+                    -->
+                    <field name="partner_id"
+                           string="Client"
+                           domain="[('is_company','=',False)]"
+                           required="1"
+                           options="{'no_quick_create': True}"/>
+
+                    <field name="ruhunu_client_title" required="1"/>
+                    <field name="ruhunu_first_name" required="1"/>
+                    <field name="ruhunu_last_name" required="1"/>
+                    <field name="ruhunu_nic" required="1"/>
+                    <field name="ruhunu_birthday" required="1"/>
+
+                    <!-- F11: read-only computed age -->
+                    <field name="ruhunu_age" readonly="1"/>
+
+                    <field name="ruhunu_gender"/>
+                    <field name="ruhunu_contact_no" required="1"/>
+                    <field name="ruhunu_whatsapp_no"/>
+                    <field name="ruhunu_address"/>
+                    <field name="ruhunu_city_id"/>
+                    <field name="ruhunu_email"/>
+                    <field name="ruhunu_referred_by_id"/>
+
+                    <!-- F19: Insurance toggle -->
+                    <field name="ruhunu_has_insurance"/>
+
+                    <!--
+                        F20: Insurance Company — mandatory and visible only when
+                        ruhunu_has_insurance is True. The server-side
+                        @api.constrains backs this up for ORM/API writes.
+                    -->
+                    <field name="ruhunu_insurance_company_id"
+                           invisible="not ruhunu_has_insurance"
+                           required="ruhunu_has_insurance"/>
+
+                    <!-- F21: Insurance Exp Date — visible only with insurance -->
+                    <field name="ruhunu_insurance_exp_date"
+                           invisible="not ruhunu_has_insurance"/>
+
+                    <field name="ruhunu_vip"/>
+                    <field name="ruhunu_occupation_id"/>
+                    <field name="ruhunu_employer_id"/>
+
+                    <!--
+                        F_CT: Client Type radio.
+                        Placed at the end of Client Details so the guardian
+                        branch (Patient Details) appears naturally below.
+                        widget="radio" renders as horizontal radio buttons.
+                    -->
+                    <field name="ruhunu_client_type" widget="radio"
+                           string="Client is Patient or Guardian?"/>
+
+                </group>
+
+                <!-- ── 2.5. Patient Details (visible when client = Guardian) ── -->
+                <!--
+                    Entire section is hidden when client_type == 'patient'.
+                    All 8 patient fields live here and stay invisible for
+                    normal (patient) leads, keeping the form clean.
+                -->
+                <group string="Patient Details"
+                       name="ruhunu_patient_details"
+                       invisible="ruhunu_client_type != 'guardian'">
+
+                    <field name="ruhunu_patient_title"/>
+                    <field name="ruhunu_patient_first_name"/>
+                    <field name="ruhunu_patient_last_name"/>
+                    <field name="ruhunu_patient_birthday"/>
+
+                    <!-- Computed age – read-only -->
+                    <field name="ruhunu_patient_age" readonly="1"/>
+
+                    <field name="ruhunu_relation_to_client_id"/>
+                    <field name="ruhunu_patient_gender"/>
+                    <field name="ruhunu_patient_phone"/>
+                    <field name="ruhunu_patient_whatsapp"/>
+
+                </group>
+
+                <!-- ── 3. Maternity Details (conditional) ───────────────── -->
+                <!--
+                    The entire group is hidden unless ruhunu_is_maternity = True.
+                    That flag flips automatically when the lead category name
+                    equals "Maternity" (case-insensitive), via a stored compute.
+                -->
+                <group string="Maternity Details"
+                       name="ruhunu_maternity_details"
+                       invisible="not ruhunu_is_maternity">
+                    <field name="ruhunu_expected_delivery_date"/>
+                    <field name="ruhunu_maternity_stage"/>
+                </group>
+
+                <!-- ── 4. Client Follow Up Updates ──────────────────────── -->
+                <group string="Client Follow Up Updates"
+                       name="ruhunu_followup_updates">
+
+                    <!-- F_FC1: First Contact Completion toggle -->
+                    <field name="ruhunu_first_contact_done"/>
+
+                    <!--
+                        F_FC2: First Contacted Date
+                        Mandatory and visible only when ruhunu_first_contact_done = True.
+                        Server-side @api.constrains enforces this for ORM/API writes.
+                    -->
+                    <field name="ruhunu_first_contacted_date"
+                           invisible="not ruhunu_first_contact_done"
+                           required="ruhunu_first_contact_done"/>
+
+                    <!--
+                        F_FC3: First Contact Response (Many2one)
+                        Mandatory and visible only when ruhunu_first_contact_done = True.
+                    -->
+                    <field name="ruhunu_first_contact_response_id"
+                           invisible="not ruhunu_first_contact_done"
+                           required="ruhunu_first_contact_done"/>
+
+                    <field name="ruhunu_client_interest"/>
+                    <field name="ruhunu_client_choice"/>
+                </group>
+
+                <!-- ── 5. Confirmation ──────────────────────────────────── -->
+                <field name="ruhunu_stage_name" invisible="1"/>
+                <group string="Confirmation" name="ruhunu_confirmation"
+                       invisible="ruhunu_stage_name not in ['Follow Up', 'Confirmation', 'Won', 'Lost']">
+                    <field name="ruhunu_appointment_date"/>
+                </group>
+
+                <!-- ── 6. Closure ───────────────────────────────────────── -->
+                <!--
+                    lost_reason_id already exists on crm.lead (core field).
+                    It becomes mandatory whenever ruhunu_is_lost_stage = True
+                    (i.e. when stage name = "Lost", case-insensitive).
+                    The @api.constrains in crm_lead.py enforces this server-side.
+                -->
+                <group string="Closure" name="ruhunu_closure"
+                       invisible="ruhunu_stage_name not in ['Follow Up', 'Confirmation', 'Won', 'Lost']">
+                    <field name="ruhunu_closure_remark"/>
+                    <field name="lost_reason_id"
+                           string="Lost Reason"
+                           required="ruhunu_is_lost_stage"/>
+                </group>
+
+            </xpath>
+
+            <!--
+                Hide the core CRM partner groups that appear BELOW our custom
+                sections (because our xpath injects after oe_title, those groups
+                appear after our Closure section and duplicate the Client / Email
+                / Phone fields already captured in our "Client Details" section).
+
+                group[@name='lead_partner']        → shown for type='lead'
+                group[@name='opportunity_partner'] → shown for type='opportunity'
+
+                We use position="attributes" + invisible="1" so the core XML
+                nodes remain intact (upgrade-safe) but are never rendered.
+            -->
+            <xpath expr="//group[@name='lead_partner']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+
+            <xpath expr="//group[@name='opportunity_partner']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+
+            <!-- Hide original priority field which gets pushed to the bottom -->
+            <xpath expr="//field[@name='priority']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- ── Quick Create Form Inheritance ─────────────────────────────────── -->
+    <record id="ruhunu_crm_quick_create_form_inherit" model="ir.ui.view">
+        <field name="name">crm.quick.create.opportunity.form.ruhunu.inherit</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.quick_create_opportunity_form"/>
+        <field name="arch" type="xml">
+            
+            <!-- Hide Company row entirely (which uses commercial_partner_id) -->
+            <xpath expr="//field[@name='commercial_partner_id']/.." position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            
+            <!-- Rename Contact to Client (placeholder and icon tooltip), make it mandatory, disable quick-create -->
+            <xpath expr="//field[@name='partner_id']" position="attributes">
+                <attribute name="placeholder">Client</attribute>
+                <attribute name="required">1</attribute>
+                <attribute name="options">{"no_quick_create": true}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='partner_id']/../i" position="attributes">
+                <attribute name="title">Client</attribute>
+            </xpath>
+
+            <!-- Hide Contact Email row entirely -->
+            <xpath expr="//field[@name='email_from']/.." position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+
+            <!-- Hide Contact Phone row entirely -->
+            <xpath expr="//field[@name='phone']/.." position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+
+            <!-- Hide Expected Revenue and Priority row entirely -->
+            <xpath expr="//field[@name='expected_revenue']/../.." position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+
+            <!--
+                Inject our custom mandatory fields vertically using the exact
+                same flexbox CSS classes as the core quick create form.
+
+                Fields shown   : Lead Category, Lead Source, First Name,
+                                 Contact No, Lead Summary
+                Fields removed : Title, Last Name, NIC, Birthday
+                                 (Opportunity Name is AUTO-GENERATED server-side)
+            -->
+            <xpath expr="//field[@name='partner_id']/.." position="after">
+                <div class="d-flex align-items-center" colspan="2">
+                    <i class="fa fa-tags" title="Lead Category"/>
+                    <field name="ruhunu_lead_category_id" required="1" nolabel="1" placeholder="Lead Category" class="o_field_highlight w-100 mb-0"/>
+                </div>
+
+                <div class="d-flex align-items-center" colspan="2">
+                    <i class="fa fa-share-alt" title="Lead Source"/>
+                    <field name="ruhunu_lead_source_id" required="1" nolabel="1" placeholder="Lead Source" class="o_field_highlight w-100 mb-0"/>
+                </div>
+
+                <div class="d-flex align-items-center" colspan="2">
+                    <i class="fa fa-user-circle" title="First Name"/>
+                    <field name="ruhunu_first_name" required="1" nolabel="1" placeholder="First Name" class="o_field_highlight w-100 mb-0"/>
+                </div>
+
+                <div class="d-flex align-items-center" colspan="2">
+                    <i class="fa fa-phone" title="Contact No"/>
+                    <field name="ruhunu_contact_no" required="1" nolabel="1" placeholder="Contact No" class="o_field_highlight w-100 mb-0"/>
+                </div>
+
+                <div class="d-flex align-items-center" colspan="2">
+                    <i class="fa fa-file-text-o" title="Lead Summary"/>
+                    <field name="ruhunu_lead_summary" required="1" nolabel="1" placeholder="Lead Summary" class="o_field_highlight w-100 mb-0"/>
+                </div>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- ───────────────────────────────────────────────────────────────────────
+         EXTEND KANBAN VIEW
+         ─────────────────────────────────────────────────────────────────────── -->
+    <record id="ruhunu_crm_case_kanban_view_leads_inherit" model="ir.ui.view">
+        <field name="name">ruhunu.crm.lead.kanban.inherit</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
+        <field name="arch" type="xml">
+            <!-- Inject the new fields right after the Partner Name block in the Kanban card -->
+            <xpath expr="//field[@name='partner_name']" position="after">
+                <div t-if="record.ruhunu_first_name.raw_value" class="text-muted mt-1">
+                    <span class="fw-bold"><i class="fa fa-user-circle"/> First Name:</span> 
+                    <field name="ruhunu_first_name"/>
+                </div>
+                <div t-if="record.ruhunu_lead_category_id.raw_value" class="text-muted">
+                    <span class="fw-bold"><i class="fa fa-tags"/> Category:</span> 
+                    <field name="ruhunu_lead_category_id"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ───────────────────────────────────────────────────────────────────────
+         REVENUE TRACKING TAB  (previously in ruhunu_crm_revenue)
+         ─────────────────────────────────────────────────────────────────────── -->
+    <record id="ruhunu_crm_lead_form_revenue_tracking" model="ir.ui.view">
+        <field name="name">crm.lead.form.ruhunu.revenue.tracking</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Revenue Tracking" name="revenue_tracking">
+
+                    <!-- Catalogue button lives on crm.lead, placed OUTSIDE the One2many -->
+                    <div class="o_field_widget mb-2">
+                        <button string="Catalogue"
+                                type="object"
+                                name="action_open_product_catalogue"
+                                class="btn btn-secondary btn-sm"
+                                icon="fa-book"/>
+                    </div>
+
+                    <field name="lead_line_ids"
+                           widget="section_and_note_one2many"
+                           context="{'default_lead_id': id}">
+
+                        <list editable="bottom" string="Revenue Lines">
+
+                            <control>
+                                <create string="Add a product"
+                                        context="{'default_display_type': False}"/>
+                                <create string="Add a section"
+                                        context="{'default_display_type': 'line_section'}"/>
+                                <create string="Add a note"
+                                        context="{'default_display_type': 'line_note'}"/>
+                            </control>
+
+                            <field name="sequence" widget="handle"/>
+                            <field name="display_type" column_invisible="True"/>
+                            <field name="company_id" column_invisible="True"/>
+                            <field name="currency_id" column_invisible="True"/>
+
+                            <field name="product_id"
+                                   string="Product"
+                                   invisible="display_type in ('line_section', 'line_note')"
+                                   options="{'no_create': True}"
+                                   context="{'default_sale_ok': True}"/>
+
+                            <field name="name"
+                                   string="Description"
+                                   widget="section_and_note_text"
+                                   optional="show"/>
+
+                            <field name="product_uom_qty"
+                                   string="Qty"
+                                   invisible="display_type in ('line_section', 'line_note')"/>
+
+                            <field name="product_uom_id"
+                                   string="Unit"
+                                   invisible="display_type in ('line_section', 'line_note')"
+                                   optional="hide"
+                                   options="{'no_create': True}"/>
+
+                            <field name="price_unit"
+                                   string="Unit Price"
+                                   invisible="display_type in ('line_section', 'line_note')"/>
+
+                            <field name="tax_id"
+                                   string="Taxes"
+                                   widget="many2many_tags"
+                                   invisible="display_type in ('line_section', 'line_note')"
+                                   optional="show"
+                                   domain="[('type_tax_use', '=', 'sale'), ('company_id', '=', company_id)]"
+                                   options="{'no_create': True}"/>
+
+                            <field name="price_subtotal"
+                                   string="Subtotal"
+                                   widget="monetary"
+                                   invisible="display_type in ('line_section', 'line_note')"
+                                   readonly="True"/>
+
+                            <field name="attachment_count"
+                                   string="Files"
+                                   invisible="display_type in ('line_section', 'line_note')"
+                                   readonly="True"
+                                   optional="show"/>
+
+                            <button name="action_manage_attachments"
+                                    type="object"
+                                    title="Add / view attached files for this revenue line"
+                                    icon="fa-paperclip"
+                                    invisible="display_type in ('line_section', 'line_note')"
+                                    class="btn btn-sm btn-link"/>
+
+                        </list>
+                    </field>
+
+                    <!-- Totals summary block, right-aligned below the lines -->
+                    <div class="row justify-content-end mt-3">
+                        <div class="col-lg-4 col-md-6">
+                            <table class="table table-sm o_subtotal_table">
+                                <tbody>
+                                    <tr>
+                                        <td class="text-end">
+                                            <strong>Untaxed Revenue</strong>
+                                        </td>
+                                        <td class="text-end o_price_total">
+                                            <field name="revenue_subtotal"
+                                                   widget="monetary"
+                                                   options="{'currency_field': 'company_currency'}"
+                                                   readonly="True"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-end">
+                                            <strong>Taxes</strong>
+                                        </td>
+                                        <td class="text-end o_price_total">
+                                            <field name="revenue_tax_total"
+                                                   widget="monetary"
+                                                   options="{'currency_field': 'company_currency'}"
+                                                   readonly="True"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="o_subtotal">
+                                        <td class="text-end border-top">
+                                            <strong>Total</strong>
+                                        </td>
+                                        <td class="text-end border-top o_price_total">
+                                            <field name="revenue_total"
+                                                   widget="monetary"
+                                                   options="{'currency_field': 'company_currency'}"
+                                                   readonly="True"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
+

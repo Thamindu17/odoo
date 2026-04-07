@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="login_layout_inherit" model="ir.ui.view">
+        <field name="name">Login Layout Branding</field>
+        <field name="inherit_id" ref="web.login_layout"/>
+        <field name="type">qweb</field>
+        <field name="arch" type="xml">
+            <xpath expr="//t[@t-call='web.frontend_layout']" position="inside">
+                <style t-if="request.env.company.ui_login_background">
+                    body {
+                        background-image: url('/web/image/res.company/<t t-esc="request.env.company.id"/>/ui_login_background') !important;
+                        background-size: cover !important;
+                        background-position: center !important;
+                        background-attachment: fixed !important;
+                    }
+                    #wrapwrap {
+                        background: transparent !important;
+                    }
+                </style>
+            </xpath>
+            <!-- Target the first image (company logo) -->
+            <xpath expr="//img" position="attributes">
+                <attribute name="t-att-src">request.env.company.ui_logo and ('/web/image/res.company/%s/ui_logo' % request.env.company.id) or '/web/static/src/img/logo.png'</attribute>
+                <attribute name="t-att-alt">request.env.company.name</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="login_inherit" model="ir.ui.view">
+        <field name="name">Login Page Branding</field>
+        <field name="inherit_id" ref="web.login"/>
+        <field name="type">qweb</field>
+        <field name="arch" type="xml">
+            <!-- Target the first form -->
+            <xpath expr="//form" position="attributes">
+                <attribute name="t-attf-class">oe_login_form o_login_branding</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="webclient_bootstrap_inherit" model="ir.ui.view">
+        <field name="name">Web Client Branding</field>
+        <field name="inherit_id" ref="web.webclient_bootstrap"/>
+        <field name="type">qweb</field>
+        <field name="arch" type="xml">
+            <xpath expr="//t[@t-set='head']" position="after">
+                <t t-set="branding_vars" t-value="request.env.company.sudo()._get_branding_css_vars()"/>
+                <style type="text/css">
+                    :root {
+                        <t t-foreach="branding_vars.items()" t-as="var">
+                            <t t-esc="var[0]"/>: <t t-esc="var[1]"/>;
+                        </t>
+                    }
+                </style>
+            </xpath>
+        </field>
+    </record>
+</odoo>

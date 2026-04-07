@@ -1,0 +1,8 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ruhunu_sms_template_user,ruhunu.sms.template.user,model_ruhunu_sms_template,sales_team.group_sale_salesman,1,0,0,0
+access_ruhunu_sms_template_manager,ruhunu.sms.template.manager,model_ruhunu_sms_template,sales_team.group_sale_manager,1,1,1,1
+access_ruhunu_sms_log_user,ruhunu.sms.log.user,model_ruhunu_sms_log,sales_team.group_sale_salesman,1,0,0,0
+access_ruhunu_sms_log_manager,ruhunu.sms.log.manager,model_ruhunu_sms_log,sales_team.group_sale_manager,1,1,1,0
+access_ruhunu_sms_wizard_user,ruhunu.sms.wizard.user,model_ruhunu_sms_wizard,sales_team.group_sale_salesman,1,1,1,0
+access_ruhunu_sms_token_user,ruhunu.sms.token.user,model_ruhunu_sms_token,sales_team.group_sale_salesman,1,0,0,0
+access_ruhunu_sms_token_manager,ruhunu.sms.token.manager,model_ruhunu_sms_token,sales_team.group_sale_manager,1,1,1,1

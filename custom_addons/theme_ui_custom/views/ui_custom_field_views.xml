@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_ui_custom_field_tree" model="ir.ui.view">
+        <field name="name">ui.custom.field.tree</field>
+        <field name="model">ui.custom.field</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="field_name"/>
+                <field name="model_id"/>
+                <field name="field_type"/>
+                <field name="required"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'created'" decoration-danger="state == 'error'"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ui_custom_field_form" model="ir.ui.view">
+        <field name="name">ui.custom.field.form</field>
+        <field name="model">ui.custom.field</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,created"/>
+                    <button name="action_create_field" type="object" string="Create Field" class="oe_highlight" invisible="state not in ('draft', 'error')"/>
+                    <button name="action_check_field_data" type="object" string="Check Data" class="btn-secondary" invisible="state != 'created'"/>
+                    <button name="action_remove_field" type="object" string="Remove Field" class="btn-danger" invisible="state != 'created'"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1>
+                            <field name="name" placeholder="Field Display Name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="field_name"/>
+                            <field name="model_id" options="{'no_create': True}"/>
+                            <field name="model_name" readonly="1"/>
+                            <field name="field_type"/>
+                        </group>
+                        <group>
+                            <field name="sequence"/>
+                            <field name="required"/>
+                            <field name="default_value"/>
+                            <field name="help_text"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="selection" string="Selection Options" invisible="state not in ('created', 'draft')">
+                            <group>
+                                <field name="selection_options" required="field_type == 'selection'" invisible="field_type != 'selection'"/>
+                                <field name="relation_model_id" required="field_type in ('many2one', 'many2many')" invisible="field_type not in ('many2one', 'many2many')"/>
+                            </group>
+                        </page>
+                        <page name="validations" string="Validations">
+                            <field name="validation_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="validation_type"/>
+                                    <field name="regex_pattern" invisible="validation_type != 'regex'"/>
+                                    <field name="regex_message" invisible="validation_type != 'regex'"/>
+                                    <field name="min_value" invisible="validation_type != 'min_max_numeric'"/>
+                                    <field name="max_value" invisible="validation_type != 'min_max_numeric'"/>
+                                    <field name="min_length" invisible="validation_type not in ('min_length', 'max_length')"/>
+                                    <field name="max_length" invisible="validation_type not in ('min_length', 'max_length')"/>
+                                    <field name="active"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page name="error" string="Error Details" invisible="state != 'error'">
+                            <field name="error_message" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_ui_field_validation_tree" model="ir.ui.view">
+        <field name="name">ui.field.validation.tree</field>
+        <field name="model">ui.field.validation</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="custom_field_id"/>
+                <field name="validation_type"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_ui_custom_field" model="ir.actions.act_window">
+        <field name="name">Custom Fields</field>
+        <field name="res_model">ui.custom.field</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first custom field
+            </p>
+            <p>
+                Add custom fields to any model with validation rules.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_ui_field_validation" model="ir.actions.act_window">
+        <field name="name">Field Validations</field>
+        <field name="res_model">ui.field.validation</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_ui_custom_field"
+              name="Custom Fields"
+              parent="menu_ui_form_layout_root"
+              action="action_ui_custom_field"
+              sequence="20"/>
+
+    <menuitem id="menu_ui_field_validation"
+              name="Field Validations"
+              parent="menu_ui_form_layout_root"
+              action="action_ui_field_validation"
+              sequence="30"
+              groups="base.group_no_one"/>
+</odoo>

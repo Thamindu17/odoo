@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="group_ui_admin" model="res.groups">
+        <field name="name">UI Customization Admin</field>
+        <field name="comment">Users with this group can configure UI customizations including branding, form layouts, and custom fields.</field>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+
+    <record id="base.user_admin" model="res.users">
+        <field name="groups_id" eval="[(4, ref('group_ui_admin'))]"/>
+    </record>
+</odoo>

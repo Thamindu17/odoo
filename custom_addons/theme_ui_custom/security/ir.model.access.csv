@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ui_form_layout_admin,ui.form.layout.admin,model_ui_form_layout,group_ui_admin,1,1,1,1
+access_ui_custom_field_admin,ui.custom.field.admin,model_ui_custom_field,group_ui_admin,1,1,1,1
+access_ui_field_validation_admin,ui.field.validation.admin,model_ui_field_validation,group_ui_admin,1,1,1,1

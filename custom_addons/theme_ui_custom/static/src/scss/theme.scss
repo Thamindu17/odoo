@@ -1,0 +1,478 @@
+// Theme UI Custom - Backend Theme Overrides
+// Replaces Odoo's hardcoded purple (#875A7B) with CSS custom properties
+// Loaded after Odoo's default styles for proper cascade
+
+// =============================================================================
+// GLOBAL TYPOGRAPHY
+// =============================================================================
+
+body,
+input,
+select,
+textarea,
+button {
+    font-family: var(--font-family);
+}
+
+
+// =============================================================================
+// MAIN NAVBAR
+// =============================================================================
+
+.o_main_navbar {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+
+    // Menu items in navbar
+    .o_menu_item,
+    .o_menu_item > a {
+        color: var(--primary-foreground);
+
+        &:hover,
+        &:focus {
+            color: var(--primary-foreground);
+            opacity: 0.9;
+        }
+    }
+
+    // Menu brand/logo text
+    .o_menu_brand {
+        color: var(--primary-foreground) !important; // Override Odoo's !important
+
+        &:hover,
+        &:focus {
+            color: var(--primary-foreground) !important;
+        }
+    }
+
+    // Navbar icons and toggles
+    .o_menu_toggle,
+    .navbar-toggler {
+        color: var(--primary-foreground);
+        border-color: var(--primary-foreground);
+
+        &:hover,
+        &:focus {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+    }
+
+    // Search bar in navbar
+    .o_search_view_input {
+        &::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+    }
+}
+
+
+// =============================================================================
+// PRIMARY BUTTONS
+// =============================================================================
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--primary-foreground);
+
+    &:hover,
+    &:focus,
+    &:active {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: var(--primary-foreground);
+        opacity: 0.9;
+    }
+
+    &:disabled,
+    &.disabled {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        opacity: 0.6;
+    }
+}
+
+// Button group within primary
+.btn-group-primary .btn-primary,
+.btn-primary:not(:disabled):not(.disabled):active:focus,
+.btn-primary:not(:disabled):not(.disabled).active:focus,
+.show > .btn-primary.dropdown-toggle:focus {
+    box-shadow: 0 0 0 0.2rem rgba(var(--primary-color), 0.5);
+}
+
+
+// =============================================================================
+// SECONDARY BUTTONS & ACCENTS
+// =============================================================================
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: #FFFFFF;
+
+    &:hover,
+    &:focus,
+    &:active {
+        background-color: var(--secondary-color);
+        border-color: var(--secondary-color);
+        color: #FFFFFF;
+        opacity: 0.9;
+    }
+}
+
+// Text links and secondary actions
+.text-primary,
+a {
+    color: var(--primary-color);
+
+    &:hover,
+    &:focus {
+        color: var(--primary-color);
+    }
+}
+
+
+// =============================================================================
+// FORM VIEWS & INPUTS
+// =============================================================================
+
+.o_form_view {
+    // Focused field highlight
+    .o_field_widget:focus-within,
+    .o_field_widget.o_field_highlight {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 1px var(--primary-color);
+    }
+
+    // Active/editable fields
+    .o_field_widget.o_input:focus,
+    input:focus,
+    textarea:focus,
+    select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 1px var(--primary-color);
+    }
+
+    // Field labels for required fields
+    .o_form_label:not(.o_empty_label):after {
+        color: var(--primary-color);
+    }
+}
+
+// Input group addon
+.input-group-text {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+
+// =============================================================================
+// MENUS & NAVIGATION
+// =============================================================================
+
+// Sidebar / App menu
+.o_menu_apps .o_app {
+    &.o_active,
+    &:hover {
+        background-color: var(--primary-color);
+
+        .o_app_name {
+            color: var(--primary-foreground);
+        }
+
+        .o_app_icon {
+            color: var(--primary-foreground);
+        }
+    }
+}
+
+// Secondary menu items
+.o_menu_secondary {
+    .o_menu_item {
+        &.o_active,
+        &:hover,
+        &.show {
+            > a {
+                color: var(--primary-color);
+                background-color: rgba(var(--primary-color), 0.1);
+            }
+        }
+    }
+}
+
+// Breadcrumb
+.o_breadcrumb {
+    .breadcrumb-item {
+        a {
+            color: var(--primary-color);
+
+            &:hover {
+                color: var(--primary-color);
+            }
+        }
+
+        &.active {
+            color: var(--primary-color);
+        }
+    }
+}
+
+// Pagination
+.pagination {
+    .page-item {
+        &.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: var(--primary-foreground);
+        }
+
+        .page-link {
+            color: var(--primary-color);
+
+            &:hover {
+                background-color: rgba(var(--primary-color), 0.1);
+                border-color: var(--primary-color);
+                color: var(--primary-color);
+            }
+        }
+    }
+}
+
+
+// =============================================================================
+// BADGES, TAGS & STATUS INDICATORS
+// =============================================================================
+
+.badge,
+.o_badge {
+    &.badge-primary,
+    &[style*="background-color: #875A7B"],
+    &[style*="background-color:#875A7B"] {
+        background-color: var(--primary-color) !important; // Override inline styles
+        color: var(--primary-foreground) !important;
+    }
+}
+
+// Status tags in lists and forms
+.o_tag_color_0,
+.o_status_color_0,
+.o_kanban_counter .o_kanban_status.o_status_color_0 {
+    background-color: var(--primary-color) !important;
+}
+
+// Kanban state indicators
+.o_kanban_record {
+    .o_kanban_record_left {
+        .o_kanban_state {
+            &.o_kanban_green,
+            &.o_kanban_done {
+                background-color: var(--primary-color);
+            }
+        }
+    }
+}
+
+// Priority stars
+.o_priority_star {
+    &.o_priority_high {
+        color: var(--primary-color);
+    }
+}
+
+
+// =============================================================================
+// CHECKBOXES & RADIO BUTTONS
+// =============================================================================
+
+// Custom checkbox/radio active state
+.o_checkbox,
+.o_radio {
+    input:checked + .o_checkbox_tick,
+    input:checked + span {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: var(--primary-foreground);
+    }
+}
+
+// Form checkbox
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+
+// =============================================================================
+// CARDS & PANELS
+// =============================================================================
+
+.o_card {
+    &.o_card_primary,
+    .o_card_header_primary {
+        border-color: var(--primary-color);
+
+        .o_card_title {
+            color: var(--primary-color);
+        }
+    }
+}
+
+// Panel/section headers
+.o_panel_header,
+.o_control_panel {
+    .o_cp_top_left,
+    .o_cp_top_right {
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+    }
+}
+
+
+// =============================================================================
+// LIST / TREE VIEWS
+// =============================================================================
+
+.o_list_view {
+    // Selected row highlight
+    .o_list_record_selector input:checked ~ .o_list_record {
+        background-color: rgba(var(--primary-color), 0.05);
+    }
+
+    // Hover state
+    tbody tr:hover {
+        background-color: rgba(var(--primary-color), 0.03);
+    }
+
+    // Sortable headers
+    th.o_column_sortable:hover {
+        color: var(--primary-color);
+    }
+}
+
+
+// =============================================================================
+// CALENDAR VIEW
+// =============================================================================
+
+.o_calendar_view {
+    .o_calendar_event {
+        &.o_event_primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        &.o_event_secondary {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+    }
+}
+
+
+// =============================================================================
+// DASHBOARD & ACTIVITY VIEWS
+// =============================================================================
+
+.o_dashboard {
+    .o_dashboard_block {
+        .o_dashboard_block_header {
+            border-bottom-color: var(--primary-color);
+        }
+    }
+}
+
+// Activity items
+.o_activity {
+    .o_activity_type {
+        color: var(--primary-color);
+    }
+}
+
+
+// =============================================================================
+// DIALOG & MODAL
+// =============================================================================
+
+.modal {
+    .modal-header {
+        background-color: var(--primary-color);
+        color: var(--primary-foreground);
+
+        .modal-title {
+            color: var(--primary-foreground);
+        }
+
+        .close {
+            color: var(--primary-foreground);
+            opacity: 0.8;
+
+            &:hover {
+                opacity: 1;
+            }
+        }
+    }
+
+    .modal-footer {
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+    }
+}
+
+
+// =============================================================================
+// NOTIFICATIONS & ALERTS
+// =============================================================================
+
+.o_notification {
+    &.o_notification_primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: var(--primary-foreground);
+    }
+}
+
+.alert-primary {
+    background-color: rgba(var(--primary-color), 0.1);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+
+// =============================================================================
+// SCROLLBAR (WEBKIT)
+// =============================================================================
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--primary-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--secondary-color);
+}
+
+
+// =============================================================================
+// UTILITY CLASSES
+// =============================================================================
+
+.text-primary {
+    color: var(--primary-color) !important;
+}
+
+.bg-primary {
+    background-color: var(--primary-color) !important;
+    color: var(--primary-foreground) !important;
+}
+
+.bg-secondary {
+    background-color: var(--secondary-color) !important;
+    color: #FFFFFF !important;
+}
+
+.border-primary {
+    border-color: var(--primary-color) !important;
+}

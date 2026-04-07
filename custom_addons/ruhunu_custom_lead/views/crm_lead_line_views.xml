@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        crm.lead.line — Attachment Management Form
+        ==========================================
+        Opened (as a modal dialog) when the operator clicks the paperclip
+        button on any product row in the Revenue Tracking list.
+    -->
+    <record id="crm_lead_line_view_form_attachments" model="ir.ui.view">
+        <field name="name">crm.lead.line.form.attachments</field>
+        <field name="model">crm.lead.line</field>
+        <field name="arch" type="xml">
+            <form string="Line Attachments">
+                <sheet>
+                    <!-- Line context: read-only summary -->
+                    <group col="2" string="Revenue Line">
+                        <field name="product_id"
+                               readonly="True"
+                               string="Product"
+                               options="{'no_open': True}"/>
+                        <field name="name"
+                               readonly="True"
+                               string="Description"/>
+                        <field name="product_uom_qty"
+                               readonly="True"
+                               string="Qty"/>
+                        <field name="price_unit"
+                               readonly="True"
+                               string="Unit Price"/>
+                    </group>
+
+                    <separator string="Attached Files"/>
+
+                    <!-- Allowed-type reminder for the operator -->
+                    <p class="text-muted small mb-2">
+                        Upload supporting files for this revenue line (bills,
+                        reports, photos, etc.).
+                        Allowed types: <strong>images, PDF, Excel, Word</strong>.
+                        Maximum <strong>20 MB</strong> per file.
+                    </p>
+
+                    <!-- many2many_binary works correctly in form context -->
+                    <field name="attachment_ids"
+                           widget="many2many_binary"
+                           string="Files"
+                           nolabel="1"/>
+
+                </sheet>
+                <footer>
+                    <button string="Save &amp; Close"
+                            class="btn-primary"
+                            special="save"/>
+                    <button string="Discard"
+                            class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="ruhunu_sms_wizard_view_form" model="ir.ui.view">
+        <field name="name">ruhunu.sms.wizard.form</field>
+        <field name="model">ruhunu.sms.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Send SMS">
+                <group>
+                    <group>
+                        <field name="lead_id" invisible="1"/>
+                        <field name="phone_number" 
+                               placeholder="+94771234567"/>
+                        <field name="template_id" 
+                               options="{'no_open': True, 'no_create': True}"
+                               placeholder="Select a template..."/>
+                    </group>
+                    <group>
+                        <field name="character_count" 
+                               string="Characters Used"
+                               readonly="1"/>
+                        <field name="remaining_characters" 
+                               string="Characters Remaining"
+                               readonly="1"
+                               class="text-success"
+                               invisible="is_over_limit"/>
+                        <field name="remaining_characters" 
+                               string="Characters Over Limit"
+                               readonly="1"
+                               class="text-danger"
+                               invisible="not is_over_limit"/>
+                        <field name="is_over_limit" invisible="1"/>
+                    </group>
+                </group>
+                <group>
+                    <field name="message" 
+                           required="1"
+                           placeholder="Enter your message here or select a template above...&#10;&#10;Available placeholders:&#10;{{first_name}} - Lead's first name&#10;{{appointment_date}} - Appointment date&#10;{{phone_number}} - Contact number&#10;{{hospital_name}} - Ruhunu Hospital&#10;{{link}} - Feedback link"
+                           colspan="2"
+                           style="height: 150px;"/>
+                </group>
+                <footer>
+                    <button name="action_send_sms" 
+                            string="Send Message" 
+                            type="object" 
+                            class="btn-primary"
+                            icon="fa-paper-plane"
+                            data-hotkey="q"/>
+                    <button string="Cancel" 
+                            class="btn-secondary" 
+                            special="cancel"
+                            data-hotkey="z"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

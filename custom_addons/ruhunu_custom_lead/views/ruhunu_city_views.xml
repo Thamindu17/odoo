@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── List View ─────────────────────────────────────────────────────── -->
+    <record id="ruhunu_city_view_list" model="ir.ui.view">
+        <field name="name">ruhunu.city.list</field>
+        <field name="model">ruhunu.city</field>
+        <field name="arch" type="xml">
+            <list string="Cities" editable="bottom">
+                <field name="name"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ── Form View ─────────────────────────────────────────────────────── -->
+    <record id="ruhunu_city_view_form" model="ir.ui.view">
+        <field name="name">ruhunu.city.form</field>
+        <field name="model">ruhunu.city</field>
+        <field name="arch" type="xml">
+            <form string="City">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Window Action ─────────────────────────────────────────────────── -->
+    <record id="ruhunu_city_action" model="ir.actions.act_window">
+        <field name="name">Cities</field>
+        <field name="res_model">ruhunu.city</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add a city</p>
+        </field>
+    </record>
+
+    <!-- ── Menu Item ─────────────────────────────────────────────────────── -->
+    <menuitem
+        id="ruhunu_menu_city"
+        name="Cities"
+        parent="ruhunu_menu_config"
+        action="ruhunu_city_action"
+        sequence="30"
+        groups="sales_team.group_sale_manager"/>
+
+</odoo>

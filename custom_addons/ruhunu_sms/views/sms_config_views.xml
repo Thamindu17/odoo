@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="res_config_settings_view_form_sms" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.ruhunu.sms</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='general_settings']" position="inside">
+                <block title="Ruhunu SMS Gateway (Dialog eSMS)" name="ruhunu_sms_gateway_settings">
+                    <setting id="ruhunu_sms_gateway_info" string="Gateway Configuration">
+                        <div class="content-group">
+                            <div class="mt16 text-muted">
+                                SMS Gateway is pre-configured for Dialog eSMS.
+                                <br/>URL: https://e-sms.dialog.lk/api/v2/sms
+                            </div>
+                        </div>
+                    </setting>
+                    <setting id="ruhunu_sms_gateway_sender_id_setting" string="Sender ID (Mask)">
+                        <div class="content-group">
+                            <div class="mt16">
+                                <field name="ruhunu_sms_gateway_sender_id" class="o_light_label" placeholder="AsthraGP"/>
+                            </div>
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

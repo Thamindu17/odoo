@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Medical Specialization Seed Data -->
+        <record id="medical_spec_general" model="hospital.partner.medical.specialization">
+            <field name="name">General Medicine</field>
+        </record>
+        <record id="medical_spec_cardio" model="hospital.partner.medical.specialization">
+            <field name="name">Cardiology</field>
+        </record>
+        <record id="medical_spec_peds" model="hospital.partner.medical.specialization">
+            <field name="name">Pediatrics</field>
+        </record>
+        <record id="medical_spec_ortho" model="hospital.partner.medical.specialization">
+            <field name="name">Orthopedics</field>
+        </record>
+        <record id="medical_spec_neuro" model="hospital.partner.medical.specialization">
+            <field name="name">Neurology</field>
+        </record>
+        <record id="medical_spec_gyno" model="hospital.partner.medical.specialization">
+            <field name="name">Gynecology</field>
+        </record>
+        <record id="medical_spec_derm" model="hospital.partner.medical.specialization">
+            <field name="name">Dermatology</field>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="ruhunu_crm_lead_form_sms_inherit" model="ir.ui.view">
+        <field name="name">crm.lead.form.ruhunu.sms.inherit</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_send_sms" 
+                        type="object" 
+                        string="Send SMS" 
+                        class="btn-primary"
+                        icon="fa-comment"
+                        invisible="not ruhunu_contact_no"/>
+                <button name="action_view_sms_history" 
+                        type="object" 
+                        string="SMS History" 
+                        class="btn-secondary"
+                        icon="fa-history"
+                        invisible="ruhunu_sms_count == 0"/>
+                <field name="ruhunu_sms_count" invisible="1"/>
+            </xpath>
+
+            <xpath expr="//sheet" position="inside">
+                <div class="oe_button_box" name="button_box">
+                    <button name="action_view_sms_history" 
+                            type="object" 
+                            class="oe_stat_button" 
+                            icon="fa-comment-o"
+                            invisible="ruhunu_sms_count == 0">
+                        <field name="ruhunu_sms_count" widget="statinfo" string="SMS"/>
+                    </button>
+                </div>
+            </xpath>
+
+            <xpath expr="//page[@name='lead']" position="after">
+                <page name="ruhunu_sms_send" string="Send SMS">
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h4 class="mb-3">
+                                Phone Number: 
+                                <field name="ruhunu_sms_tab_phone" class="fw-bold" style="display: inline-block; width: 200px;"/>
+                            </h4>
+                            
+                            <group>
+                                <field name="ruhunu_sms_tab_template_id" 
+                                       widget="selection" 
+                                       string="Templates"
+                                       options="{'no_open': True}"
+                                       placeholder="Select a template..."/>
+                            </group>
+                            
+                            <div class="mt-3">
+                                <label for="ruhunu_sms_tab_message" string="Message Content" class="fw-bold"/>
+                                <field name="ruhunu_sms_tab_message" 
+                                       placeholder="Write your message here or select a template above..."
+                                       nolabel="1"
+                                       class="w-100"
+                                       style="height: 150px;"/>
+                                <div class="text-muted small mt-1">
+                                    Maximum 256 characters. Available placeholders: {{first_name}}, {{appointment_date}}, {{phone_number}}, {{hospital_name}}, {{link}}
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4 d-flex justify-content-end">
+                                <button name="action_send_sms_from_tab" 
+                                        string="Send Message" 
+                                        type="object" 
+                                        class="btn-primary px-4"
+                                        icon="fa-paper-plane"
+                                        invisible="not ruhunu_sms_tab_phone"/>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="mt-5 mb-3"/>
+                    <h5 class="text-muted mb-3">Previous SMS History</h5>
+                    <field name="ruhunu_sms_log_ids" readonly="1">
+                        <list create="0" delete="0">
+                            <field name="create_date" string="Date Sent" widget="datetime"/>
+                            <field name="phone_number"/>
+                            <field name="message" width="50%"/>
+                            <field name="template_id"/>
+                            <field name="state" widget="badge" 
+                                   decoration-success="state == 'sent'" 
+                                   decoration-danger="state == 'failed'"
+                                   decoration-warning="state == 'draft'"/>
+                            <field name="sent_by_id"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
