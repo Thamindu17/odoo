@@ -8,6 +8,7 @@ from .client_identification import identify_client
 from .config import get_settings
 from .gemini_client import GeminiClient
 from .odoo_client import OdooClient
+from .requirement_gathering import process_requirement_turn
 from .schemas import (
     ActiveLeadCheckRequest,
     ActiveLeadCheckResponse,
@@ -22,6 +23,8 @@ from .schemas import (
     LeadListRequest,
     LeadResult,
     LeadUpdateRequest,
+    RequirementGatheringRequest,
+    RequirementGatheringResponse,
 )
 
 settings = get_settings()
@@ -31,6 +34,11 @@ app.add_middleware(
     allow_origins=[
         "http://127.0.0.1:8888",
         "http://localhost:8888",
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+        "http://127.0.0.1:5501",
+        "http://localhost:5501",
+        "null",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -166,6 +174,39 @@ def qualification_active_lead_check(req: ActiveLeadCheckRequest) -> ActiveLeadCh
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return ActiveLeadCheckResponse(**result)
+
+
+@app.post("/qualification/requirement-gathering", response_model=RequirementGatheringResponse)
+def qualification_requirement_gathering(req: RequirementGatheringRequest) -> RequirementGatheringResponse:
+    try:
+        result = process_requirement_turn(
+            flow_type=req.flow_type,
+            channel_name=req.channel_name,
+            normalized_phone=req.normalized_phone,
+            partner_id=req.partner_id,
+            current_field=req.current_field,
+            user_message=req.user_message,
+            collected_data=req.collected_data,
+            retry_counts=req.retry_counts,
+            last_client_message_at=req.last_client_message_at,
+            now_at=req.now_at,
+            auto_create_on_completion=req.auto_create_on_completion,
+            extract_entities=gemini_client.extract_requirement_entities,
+            compose_reply=gemini_client.compose_requirement_reply,
+            get_partner=odoo_client.get_partner_profile,
+            list_categories=odoo_client.list_active_lead_categories,
+            resolve_hospital_city=odoo_client.resolve_or_create_hospital_city,
+            resolve_ruhunu_city=odoo_client.resolve_or_create_ruhunu_city,
+            resolve_lead_source=odoo_client.resolve_or_create_lead_source,
+            create_partner=odoo_client.create_partner,
+            create_lead=odoo_client.create_lead,
+            get_lead=odoo_client.get_lead_by_id,
+        )
+    except Exception as exc:
+        detail = str(exc).strip() or repr(exc)
+        raise HTTPException(status_code=400, detail=detail) from exc
+
+    return RequirementGatheringResponse(**result)
 
 
 def _execute_action(action: ActionEnvelope) -> ChatResponse:

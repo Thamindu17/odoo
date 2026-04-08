@@ -140,3 +140,37 @@ class ActiveLeadCheckResponse(BaseModel):
     agent_name: str | None = None
     notification_posted: bool = False
     end_conversation: bool = False
+
+
+class RequirementGatheringRequest(BaseModel):
+    flow_type: str = Field(description="new_client or existing_no_active")
+    channel_name: str = Field(default="internal_test", min_length=1)
+    normalized_phone: str | None = None
+    partner_id: int | None = None
+
+    current_field: str | None = None
+    user_message: str | None = None
+    collected_data: dict[str, Any] = Field(default_factory=dict)
+    retry_counts: dict[str, int] = Field(default_factory=dict)
+
+    last_client_message_at: str | None = None
+    now_at: str | None = None
+    auto_create_on_completion: bool = True
+
+
+class RequirementGatheringResponse(BaseModel):
+    status: str
+    next_step: str
+    bot_message: str
+
+    current_field: str | None = None
+    collected_data: dict[str, Any] = Field(default_factory=dict)
+    retry_counts: dict[str, int] = Field(default_factory=dict)
+
+    handover_reason: str | None = None
+    created_partner_id: int | None = None
+    created_lead_id: int | None = None
+    created_lead_name: str | None = None
+    inferred_category_id: int | None = None
+    inferred_category_name: str | None = None
+    end_conversation: bool = False

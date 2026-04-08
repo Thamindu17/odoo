@@ -30,18 +30,35 @@ class OdooClient:
 
     def execute(self, model: str, method: str, *args: Any, **kwargs: Any) -> Any:
         uid = self.authenticate()
-        return self._object.execute_kw(
-            self.settings.odoo_db,
-            uid,
-            self.settings.odoo_api_key,
-            model,
-            method,
-            list(args),
-            kwargs,
-        )
+        try:
+            return self._object.execute_kw(
+                self.settings.odoo_db,
+                uid,
+                self.settings.odoo_api_key,
+                model,
+                method,
+                list(args),
+                kwargs,
+            )
+        except xmlrpc.client.Fault as exc:
+            fault_text = (exc.faultString or "").strip() or repr(exc)
+            raise RuntimeError(f"Odoo Fault [{model}.{method}]: {fault_text}") from exc
+        except xmlrpc.client.ProtocolError as exc:
+            raise RuntimeError(
+                f"Odoo ProtocolError [{model}.{method}]: {exc.errcode} {exc.errmsg}"
+            ) from exc
 
     def create_lead(self, vals: dict[str, Any]) -> int:
         return self.execute("crm.lead", "create", vals)
+
+    def get_lead_by_id(self, lead_id: int) -> dict[str, Any] | None:
+        rows = self.execute("crm.lead", "search_read", [["id", "=", lead_id]], fields=["id", "name"], limit=1)
+        if not rows:
+            return None
+        return rows[0]
+
+    def create_partner(self, vals: dict[str, Any]) -> int:
+        return self.execute("res.partner", "create", vals)
 
     def list_leads(self, domain: list[list[Any]], fields: list[str], limit: int) -> list[dict[str, Any]]:
         return self.execute("crm.lead", "search_read", domain, fields=fields, limit=limit)
@@ -98,7 +115,16 @@ class OdooClient:
         return filtered
 
     def get_partner_profile(self, partner_id: int) -> dict[str, Any] | None:
-        fields = ["id", "name", "hp_first_name", "hp_last_name", "phone", "hp_whatsapp"]
+        fields = [
+            "id",
+            "name",
+            "hp_first_name",
+            "hp_last_name",
+            "hp_salutation",
+            "hp_city_category",
+            "phone",
+            "hp_whatsapp",
+        ]
         try:
             rows = self.execute("res.partner", "search_read", [["id", "=", partner_id]], fields=fields, limit=1)
         except Exception:
@@ -143,3 +169,62 @@ class OdooClient:
             subtype_xmlid="mail.mt_comment",
         )
         return bool(result)
+
+    def list_active_lead_categories(self) -> list[dict[str, Any]]:
+        return self.execute(
+            "ruhunu.lead.category",
+            "search_read",
+            [["active", "=", True]],
+            fields=["id", "name"],
+            order="name asc",
+            limit=200,
+        )
+
+    def resolve_or_create_hospital_city(self, city_name: str) -> int:
+        name = city_name.strip()
+        rows = self.execute(
+            "hospital.partner.city",
+            "search_read",
+            [["name", "=ilike", name]],
+            fields=["id", "name"],
+            limit=1,
+        )
+        if rows:
+            return int(rows[0]["id"])
+        return int(self.execute("hospital.partner.city", "create", {"name": name}))
+
+    def resolve_or_create_ruhunu_city(self, city_name: str) -> int:
+        name = city_name.strip()
+        rows = self.execute(
+            "ruhunu.city",
+            "search_read",
+            [["name", "=ilike", name]],
+            fields=["id", "name"],
+            limit=1,
+        )
+        if rows:
+            return int(rows[0]["id"])
+        return int(self.execute("ruhunu.city", "create", {"name": name}))
+
+    def resolve_or_create_lead_source(self, source_name: str) -> dict[str, Any]:
+        name = source_name.strip()
+        rows = self.execute(
+            "ruhunu.lead.source",
+            "search_read",
+            [["name", "=ilike", name]],
+            fields=["id", "name"],
+            limit=1,
+        )
+        if rows:
+            return rows[0]
+        source_id = int(self.execute("ruhunu.lead.source", "create", {"name": name}))
+        created = self.execute(
+            "ruhunu.lead.source",
+            "search_read",
+            [["id", "=", source_id]],
+            fields=["id", "name"],
+            limit=1,
+        )
+        if created:
+            return created[0]
+        return {"id": source_id, "name": name}

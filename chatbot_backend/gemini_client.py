@@ -17,6 +17,37 @@ SYSTEM_PROMPT = (
     "payload must be an object. Do not include markdown."
 )
 
+ENTITY_EXTRACTION_PROMPT = (
+    "Extract chatbot requirement-gathering entities from one user message and return strict JSON only. "
+    "Keys: first_name, last_name, title, city, requirement_summary, lead_category_suggestion, human_request. "
+    "title must be one of mr, ms, dr, prof, rev when available. "
+    "lead_category_suggestion must be one of Maternity, Wellness, Surgery, CAG, MRI when confidently inferred, else null. "
+    "Use null for missing values. human_request must be true only if the user asks for a human/agent."
+)
+
+REQUIREMENT_REPLY_PROMPT = (
+    "You are a healthcare CRM assistant. Generate one concise user-facing reply in JSON only. "
+    "Output format: {\"message\":\"...\"}. "
+    "Keep message under 160 characters where possible. "
+    "Be polite, clear, and action-oriented. Do not include markdown."
+)
+
+FALLBACK_FIELD_PROMPTS = {
+    "first_name": "May I know your name, please?",
+    "last_name": "And your last name?",
+    "title": "How should I address you? Please choose: Mr., Ms., Dr., Prof., or Rev.",
+    "city": "Which city are you based in?",
+    "requirement_summary": "How can we help you today? Please describe your requirement briefly.",
+}
+
+FALLBACK_FIELD_REASK = {
+    "first_name": "Could you please provide your first name?",
+    "last_name": "Could you please provide your last name?",
+    "title": "Please choose: Mr., Ms., Dr., Prof., or Rev.",
+    "city": "Could you please share your city name?",
+    "requirement_summary": "Could you tell us a bit more about what you're looking for?",
+}
+
 
 class GeminiClient:
     def __init__(self, settings: Settings):
@@ -37,6 +68,43 @@ class GeminiClient:
             return json.loads(match.group(0))
         except json.JSONDecodeError:
             return {"action": "unknown", "payload": {}}
+
+    def _call_gemini_json(self, system_prompt: str, user_prompt: str) -> dict[str, Any]:
+        if not self.settings.gemini_api_key:
+            return {}
+
+        model = self.settings.gemini_model
+        endpoint = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{model}:generateContent?key={self.settings.gemini_api_key}"
+        )
+
+        body = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": system_prompt},
+                        {"text": user_prompt},
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.1,
+                "maxOutputTokens": 256,
+            },
+        }
+
+        response = requests.post(endpoint, json=body, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+
+        candidates = data.get("candidates", [])
+        if not candidates:
+            return {}
+
+        parts = candidates[0].get("content", {}).get("parts", [])
+        text = "\n".join(p.get("text", "") for p in parts)
+        return self._extract_json(text)
 
     def _infer_with_rules(self, message: str) -> dict[str, Any]:
         text = message.strip()
@@ -121,41 +189,116 @@ class GeminiClient:
         return {"action": "unknown", "payload": {}}
 
     def _infer_with_gemini(self, message: str) -> dict[str, Any]:
-        if not self.settings.gemini_api_key:
+        parsed = self._call_gemini_json(SYSTEM_PROMPT, message)
+        if not parsed:
             return {"action": "unknown", "payload": {}}
+        return parsed
 
-        model = self.settings.gemini_model
-        endpoint = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{model}:generateContent?key={self.settings.gemini_api_key}"
-        )
-
-        body = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": SYSTEM_PROMPT},
-                        {"text": message},
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.1,
-                "maxOutputTokens": 256,
-            },
+    def extract_requirement_entities(self, message: str) -> dict[str, Any]:
+        text = message.strip()
+        fallback = {
+            "first_name": None,
+            "last_name": None,
+            "title": None,
+            "city": None,
+            "requirement_summary": None,
+            "lead_category_suggestion": None,
+            "human_request": False,
         }
+        if not text:
+            return fallback
 
-        response = requests.post(endpoint, json=body, timeout=30)
-        response.raise_for_status()
-        data = response.json()
+        try:
+            parsed = self._call_gemini_json(ENTITY_EXTRACTION_PROMPT, text)
+            if not isinstance(parsed, dict):
+                return fallback
+        except RequestException:
+            parsed = {}
 
-        candidates = data.get("candidates", [])
-        if not candidates:
-            return {"action": "unknown", "payload": {}}
+        result = dict(fallback)
+        for key in ["first_name", "last_name", "title", "city", "requirement_summary", "lead_category_suggestion"]:
+            value = parsed.get(key)
+            if isinstance(value, str):
+                stripped = value.strip()
+                result[key] = stripped or None
 
-        parts = candidates[0].get("content", {}).get("parts", [])
-        text = "\n".join(p.get("text", "") for p in parts)
-        return self._extract_json(text)
+        human_value = parsed.get("human_request")
+        if isinstance(human_value, bool):
+            result["human_request"] = human_value
+        elif isinstance(human_value, str):
+            result["human_request"] = human_value.strip().lower() in {"true", "yes", "1"}
+
+        if not result["human_request"]:
+            lower = text.lower()
+            result["human_request"] = any(
+                token in lower
+                for token in ["human", "agent", "representative", "customer care", "operator"]
+            )
+
+        return result
+
+    def _fallback_requirement_reply(self, intent: str, field_name: str | None, context: dict[str, Any]) -> str:
+        first_name = str(context.get("first_name") or "").strip()
+        lead_reference = str(context.get("lead_reference") or "").strip()
+
+        if intent == "ask_field":
+            return FALLBACK_FIELD_PROMPTS.get(field_name or "", "Could you please share more details?")
+        if intent == "retry_field":
+            return FALLBACK_FIELD_REASK.get(field_name or "", "Could you please clarify that?")
+        if intent == "ack_and_ask":
+            next_prompt = FALLBACK_FIELD_PROMPTS.get(field_name or "", "Could you please share the next detail?")
+            if first_name and context.get("captured_field") == "first_name":
+                return f"Thanks, {first_name}. {next_prompt}"
+            return f"Thanks. {next_prompt}"
+        if intent == "ready_to_create":
+            return "Thank you. I have enough details to register your enquiry."
+        if intent == "handover":
+            return "I'm connecting you with a member of our team who can assist you further. Please hold."
+        if intent == "missing_phone":
+            return "I need a contact number before I can register your enquiry. I'm connecting you with our team."
+        if intent == "completion":
+            if first_name and lead_reference:
+                return f"Thank you, {first_name}! Your enquiry is registered. Reference: {lead_reference}. Our team will contact you shortly."
+            return "Thank you. Your enquiry has been registered. Our team will contact you shortly."
+        if intent == "partial_timeout":
+            return "Your enquiry has been saved with available details. Our team will follow up shortly."
+        return "Thank you. We will continue with your enquiry."
+
+    def compose_requirement_reply(
+        self,
+        intent: str,
+        field_name: str | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> str:
+        safe_context = context or {}
+
+        # Terminal/sensitive intents must stay deterministic to avoid LLM drift.
+        if intent in {"handover", "missing_phone", "completion", "partial_timeout", "ready_to_create"}:
+            return self._fallback_requirement_reply(intent, field_name, safe_context)
+
+        payload = {
+            "intent": intent,
+            "field_name": field_name,
+            "context": safe_context,
+            "allowed_fields": ["first_name", "last_name", "title", "city", "requirement_summary"],
+        }
+        prompt_text = json.dumps(payload, ensure_ascii=True)
+
+        try:
+            parsed = self._call_gemini_json(REQUIREMENT_REPLY_PROMPT, prompt_text)
+        except RequestException:
+            parsed = {}
+
+        if isinstance(parsed, dict):
+            message = parsed.get("message")
+            if isinstance(message, str):
+                cleaned = " ".join(message.split()).strip()
+                if cleaned:
+                    # Guard against intent drift: only accept LLM text for conversational intents.
+                    if intent in {"ask_field", "retry_field", "ack_and_ask"}:
+                        return cleaned[:280]
+
+        return self._fallback_requirement_reply(intent, field_name, safe_context)
 
     def infer_action(self, message: str) -> dict[str, Any]:
         try:
