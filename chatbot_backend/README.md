@@ -54,8 +54,11 @@ Section 3.2 Test (existing client active lead routing)
 Section 3.3 Test (requirement gathering + dummy-backed creation)
 - Hybrid behavior:
   - Gemini agent 1: entity extraction (name/title/city/summary + human request intent)
+  - Gemini agent 1b: category classification from requirement text (English/Sinhala/Singlish)
+  - Gemini agent 1c: lead-summary normalization to concise English before CRM save
   - Gemini agent 2: dynamic conversational reply composition
   - Deterministic policy engine: validation, retries, timeout, handover, and final Odoo writes
+  - Category keyword matching is used only as fallback if LLM category is missing
 - Start conversation turn:
   {
     "flow_type": "new_client",

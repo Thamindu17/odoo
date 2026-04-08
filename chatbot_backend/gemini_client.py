@@ -22,7 +22,23 @@ ENTITY_EXTRACTION_PROMPT = (
     "Keys: first_name, last_name, title, city, requirement_summary, lead_category_suggestion, human_request. "
     "title must be one of mr, ms, dr, prof, rev when available. "
     "lead_category_suggestion must be one of Maternity, Wellness, Surgery, CAG, MRI when confidently inferred, else null. "
+    "Support English, Sinhala, and Singlish transliteration. "
     "Use null for missing values. human_request must be true only if the user asks for a human/agent."
+)
+
+CATEGORY_CLASSIFICATION_PROMPT = (
+    "Classify the healthcare requirement text into one category and return strict JSON only. "
+    "Output format: {\"category\": <value_or_null>}. "
+    "Allowed category values only: Maternity, Wellness, Surgery, CAG, MRI. "
+    "If unclear, return null. "
+    "Understand English, Sinhala, and Singlish transliteration. Do not include markdown."
+)
+
+SUMMARY_TO_ENGLISH_PROMPT = (
+    "Rewrite the healthcare requirement into concise professional English for CRM lead summary and return strict JSON only. "
+    "Output format: {\"summary\":\"...\"}. "
+    "Input may be English, Sinhala, or Singlish transliteration. "
+    "Keep intent and medical meaning accurate. Prefer one short sentence. Do not include markdown."
 )
 
 REQUIREMENT_REPLY_PROMPT = (
@@ -299,6 +315,55 @@ class GeminiClient:
                         return cleaned[:280]
 
         return self._fallback_requirement_reply(intent, field_name, safe_context)
+
+    def classify_requirement_category(self, requirement_text: str) -> str | None:
+        text = requirement_text.strip()
+        if not text:
+            return None
+
+        try:
+            parsed = self._call_gemini_json(CATEGORY_CLASSIFICATION_PROMPT, text)
+        except RequestException:
+            parsed = {}
+
+        if not isinstance(parsed, dict):
+            return None
+
+        value = parsed.get("category")
+        if not isinstance(value, str):
+            return None
+
+        normalized = value.strip().lower()
+        mapping = {
+            "maternity": "Maternity",
+            "wellness": "Wellness",
+            "surgery": "Surgery",
+            "cag": "CAG",
+            "mri": "MRI",
+        }
+        return mapping.get(normalized)
+
+    def summarize_requirement_english(self, requirement_text: str) -> str | None:
+        text = requirement_text.strip()
+        if not text:
+            return None
+
+        try:
+            parsed = self._call_gemini_json(SUMMARY_TO_ENGLISH_PROMPT, text)
+        except RequestException:
+            parsed = {}
+
+        if not isinstance(parsed, dict):
+            return None
+
+        summary = parsed.get("summary")
+        if not isinstance(summary, str):
+            return None
+
+        cleaned = " ".join(summary.split()).strip()
+        if not cleaned:
+            return None
+        return cleaned[:280]
 
     def infer_action(self, message: str) -> dict[str, Any]:
         try:

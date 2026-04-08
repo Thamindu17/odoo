@@ -32,6 +32,7 @@ ALLOWED_CATEGORY_LABELS = {
     "mri": "MRI",
 }
 
+# Fallback keywords used only when LLM does not provide a confident category.
 CATEGORY_KEYWORDS = {
     "maternity": ["maternity", "pregnan", "delivery", "baby", "prenatal", "postnatal"],
     "wellness": ["wellness", "checkup", "check-up", "health package", "preventive"],
@@ -69,6 +70,40 @@ HUMAN_KEYWORDS = {
     "talk to someone",
     "connect me",
     "customer care",
+}
+
+NON_NAME_TOKENS = {
+    "ok",
+    "okay",
+    "yes",
+    "no",
+    "hi",
+    "hello",
+    "hey",
+    "sure",
+    "fine",
+    "thanks",
+    "thank you",
+    "k",
+    "kk",
+}
+
+SHORT_SUMMARY_TOKENS = {
+    "mri",
+    "scan",
+    "cag",
+    "angiogram",
+    "surgery",
+    "operation",
+    "wellness",
+    "checkup",
+    "check-up",
+    "consultation",
+    "pregnancy",
+    "maternity",
+    "delivery",
+    "screening",
+    "package",
 }
 
 DUMMY_VALUES = {
@@ -116,20 +151,46 @@ def _validate_alpha_spaces(value: str) -> bool:
     return all(ch.isalpha() or ch.isspace() for ch in text)
 
 
+def _looks_like_ack_name(value: str) -> bool:
+    lowered = " ".join(value.strip().lower().split())
+    return lowered in NON_NAME_TOKENS
+
+
 def _validate_city(value: str) -> bool:
     text = value.strip()
     return bool(text and len(text) <= 100)
 
 
 def _validate_summary(value: str) -> bool:
-    text = value.strip()
-    return len(text) >= 10
+    normalized = " ".join(value.strip().lower().split())
+    if not normalized:
+        return False
+
+    if normalized in NON_NAME_TOKENS or normalized.startswith("thank"):
+        return False
+
+    if len(normalized) >= 10:
+        return True
+
+    tokens = normalized.replace("/", " ").replace("-", " ").split()
+    if any(token in SHORT_SUMMARY_TOKENS for token in tokens):
+        return True
+
+    for keywords in CATEGORY_KEYWORDS.values():
+        if any(keyword in normalized for keyword in keywords):
+            return True
+
+    return False
 
 
 def _validate_field(field_name: str, value: str) -> tuple[bool, str | None]:
     text = value.strip()
     if field_name in {"first_name", "last_name"}:
-        return (_validate_alpha_spaces(text), text)
+        if not _validate_alpha_spaces(text):
+            return (False, text)
+        if _looks_like_ack_name(text):
+            return (False, text)
+        return (True, text)
     if field_name == "title":
         normalized = _normalize_title(text)
         return (normalized is not None, normalized)
@@ -265,6 +326,23 @@ def _build_lead_name(first_name: str, category_name: str | None) -> str:
     return f"{category} / {first} / {today}"
 
 
+def _display_client_name(collected: dict[str, Any], partner: dict[str, Any] | None) -> str:
+    first = str(collected.get("first_name") or "").strip()
+    last = str(collected.get("last_name") or "").strip()
+    joined = " ".join(part for part in [first, last] if part).strip()
+    if joined:
+        return joined
+
+    partner_data = partner or {}
+    partner_first = str(partner_data.get("hp_first_name") or "").strip()
+    partner_last = str(partner_data.get("hp_last_name") or "").strip()
+    partner_joined = " ".join(part for part in [partner_first, partner_last] if part).strip()
+    if partner_joined:
+        return partner_joined
+
+    return str(partner_data.get("name") or "Client").strip() or "Client"
+
+
 def _compose_reply(
     compose_reply: Callable[[str, str | None, dict[str, Any]], str],
     intent: str,
@@ -328,7 +406,13 @@ def process_requirement_turn(
     now_at: str | None,
     auto_create_on_completion: bool,
     extract_entities: Callable[[str], dict[str, Any]],
+    classify_category: Callable[[str], str | None],
+    summarize_requirement: Callable[[str], str | None],
     compose_reply: Callable[[str, str | None, dict[str, Any]], str],
+    search_partners_by_phone: Callable[[str], list[dict[str, Any]]],
+    count_active_leads_for_partner: Callable[[int], int],
+    get_latest_active_lead: Callable[[int], dict[str, Any] | None],
+    post_lead_chatter: Callable[[int, str], bool],
     get_partner: Callable[[int], dict[str, Any] | None],
     list_categories: Callable[[], list[dict[str, Any]]],
     resolve_hospital_city: Callable[[str], int],
@@ -362,12 +446,50 @@ def process_requirement_turn(
             "end_conversation": True,
         }
 
-    order = FIELD_ORDER_NEW if flow == "new_client" else FIELD_ORDER_EXISTING
     collected = dict(collected_data or {})
     retries = dict(retry_counts or {})
 
-    partner = get_partner(partner_id) if (flow == "existing_no_active" and partner_id) else None
-    if flow == "existing_no_active" and partner_id and not partner:
+    resolved_partner_id = partner_id
+    partner_matches: list[dict[str, Any]] = []
+    if normalized_phone:
+        partner_matches = search_partners_by_phone(normalized_phone)
+
+        if len(partner_matches) > 1:
+            return {
+                "status": "handover",
+                "next_step": "handover_agent",
+                "bot_message": _compose_reply(
+                    compose_reply,
+                    "handover",
+                    current_field,
+                    collected,
+                    {"handover_reason": "multiple_contact_matches", "channel_name": channel_name},
+                ),
+                "current_field": current_field,
+                "collected_data": collected,
+                "retry_counts": retries,
+                "handover_reason": "multiple_contact_matches",
+                "created_partner_id": None,
+                "created_lead_id": None,
+                "created_lead_name": None,
+                "inferred_category_id": None,
+                "inferred_category_name": None,
+                "end_conversation": True,
+            }
+
+        if len(partner_matches) == 1:
+            match_id = int(partner_matches[0]["id"])
+            resolved_partner_id = resolved_partner_id or match_id
+            if flow == "new_client":
+                flow = "existing_no_active"
+
+    if flow == "existing_no_active" and not resolved_partner_id:
+        flow = "new_client"
+
+    order = FIELD_ORDER_NEW if flow == "new_client" else FIELD_ORDER_EXISTING
+
+    partner = get_partner(resolved_partner_id) if (flow == "existing_no_active" and resolved_partner_id) else None
+    if flow == "existing_no_active" and resolved_partner_id and not partner:
         return {
             "status": "handover",
             "next_step": "handover_agent",
@@ -390,6 +512,45 @@ def process_requirement_turn(
             "end_conversation": True,
         }
 
+    if flow == "existing_no_active" and resolved_partner_id:
+        active_count = max(0, int(count_active_leads_for_partner(int(resolved_partner_id)) or 0))
+        if active_count > 0:
+            latest_active = get_latest_active_lead(int(resolved_partner_id))
+            if latest_active:
+                lead_id = int(latest_active["id"])
+                client_name = _display_client_name(collected, partner)
+                chatter_note = (
+                    f"Client {client_name} reached out via {channel_name} while having "
+                    f"{active_count} active enquiry record(s). Please review and continue the conversation."
+                )
+                try:
+                    post_lead_chatter(lead_id, chatter_note)
+                except Exception:
+                    pass
+
+            reason = "multiple_active_leads" if active_count > 1 else "active_lead_exists"
+            return {
+                "status": "handover",
+                "next_step": "notify_agent_and_end",
+                "bot_message": _compose_reply(
+                    compose_reply,
+                    "handover",
+                    current_field,
+                    collected,
+                    {"handover_reason": reason, "channel_name": channel_name},
+                ),
+                "current_field": current_field,
+                "collected_data": collected,
+                "retry_counts": retries,
+                "handover_reason": reason,
+                "created_partner_id": None,
+                "created_lead_id": None,
+                "created_lead_name": None,
+                "inferred_category_id": None,
+                "inferred_category_name": None,
+                "end_conversation": True,
+            }
+
     if partner:
         if not collected.get("first_name"):
             collected["first_name"] = _first_name_from_partner(partner)
@@ -408,7 +569,7 @@ def process_requirement_turn(
                 flow=flow,
                 channel_name=channel_name,
                 normalized_phone=normalized_phone,
-                partner_id=partner_id,
+                partner_id=resolved_partner_id,
                 collected=collected,
                 list_categories=list_categories,
                 resolve_hospital_city=resolve_hospital_city,
@@ -417,6 +578,8 @@ def process_requirement_turn(
                 create_partner=create_partner,
                 create_lead=create_lead,
                 get_lead=get_lead,
+                classify_category=classify_category,
+                summarize_requirement=summarize_requirement,
                 compose_reply=compose_reply,
                 force_partial_summary=True,
             )
@@ -463,7 +626,7 @@ def process_requirement_turn(
                     flow=flow,
                     channel_name=channel_name,
                     normalized_phone=normalized_phone,
-                    partner_id=partner_id,
+                    partner_id=resolved_partner_id,
                     collected=collected,
                     list_categories=list_categories,
                     resolve_hospital_city=resolve_hospital_city,
@@ -472,6 +635,8 @@ def process_requirement_turn(
                     create_partner=create_partner,
                     create_lead=create_lead,
                     get_lead=get_lead,
+                    classify_category=classify_category,
+                    summarize_requirement=summarize_requirement,
                     compose_reply=compose_reply,
                     force_partial_summary=False,
                 )
@@ -566,8 +731,21 @@ def process_requirement_turn(
         if normalized_hint:
             collected["_lead_category_hint"] = ALLOWED_CATEGORY_LABELS[normalized_hint]
 
-    candidate_value = str(extracted.get(target) or "").strip() or message
+    if not collected.get("_lead_category_hint"):
+        llm_category = classify_category(message)
+        normalized_llm = _normalize_category_hint(llm_category)
+        if normalized_llm:
+            collected["_lead_category_hint"] = ALLOWED_CATEGORY_LABELS[normalized_llm]
+
+    extracted_value = str(extracted.get(target) or "").strip()
+    candidate_value = extracted_value or message
     is_valid, normalized_value = _validate_field(target, candidate_value)
+    if not is_valid:
+        # LLM extraction can be too short or imprecise; retry with raw user text before counting a failed attempt.
+        raw_valid, raw_normalized = _validate_field(target, message)
+        if raw_valid:
+            candidate_value = message
+            is_valid, normalized_value = raw_valid, raw_normalized
     if not is_valid or not normalized_value:
         attempts = int(retries.get(target, 0)) + 1
         retries[target] = attempts
@@ -670,7 +848,7 @@ def process_requirement_turn(
         flow=flow,
         channel_name=channel_name,
         normalized_phone=normalized_phone,
-        partner_id=partner_id,
+        partner_id=resolved_partner_id,
         collected=collected,
         list_categories=list_categories,
         resolve_hospital_city=resolve_hospital_city,
@@ -679,6 +857,8 @@ def process_requirement_turn(
         create_partner=create_partner,
         create_lead=create_lead,
         get_lead=get_lead,
+        classify_category=classify_category,
+        summarize_requirement=summarize_requirement,
         compose_reply=compose_reply,
         force_partial_summary=False,
     )
@@ -701,6 +881,8 @@ def _complete_and_create(
     create_partner: Callable[[dict[str, Any]], int],
     create_lead: Callable[[dict[str, Any]], int],
     get_lead: Callable[[int], dict[str, Any] | None],
+    classify_category: Callable[[str], str | None],
+    summarize_requirement: Callable[[str], str | None],
     compose_reply: Callable[[str, str | None, dict[str, Any]], str],
     force_partial_summary: bool,
 ) -> dict[str, Any]:
@@ -734,6 +916,19 @@ def _complete_and_create(
 
     if force_partial_summary:
         safe["requirement_summary"] = DUMMY_VALUES["requirement_summary"]
+
+    raw_requirement = str(safe.get("requirement_summary") or "").strip()
+
+    if not safe.get("_lead_category_hint"):
+        llm_category = classify_category(raw_requirement)
+        normalized_llm = _normalize_category_hint(llm_category)
+        if normalized_llm:
+            safe["_lead_category_hint"] = ALLOWED_CATEGORY_LABELS[normalized_llm]
+
+    if raw_requirement:
+        english_summary = summarize_requirement(raw_requirement)
+        if english_summary:
+            safe["requirement_summary"] = english_summary
 
     category_id, category_name = _infer_category(
         str(safe.get("requirement_summary") or ""),

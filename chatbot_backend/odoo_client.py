@@ -159,6 +159,19 @@ class OdooClient:
             return None
         return rows[0]
 
+    def count_active_leads_for_partner(self, partner_id: int) -> int:
+        domain = [
+            ["partner_id", "=", partner_id],
+            ["active", "=", True],
+            ["stage_id.is_won", "=", False],
+            ["stage_id.name", "not ilike", "lost"],
+        ]
+        try:
+            return int(self.execute("crm.lead", "search_count", domain))
+        except Exception:
+            fallback_domain = [["partner_id", "=", partner_id], ["active", "=", True]]
+            return int(self.execute("crm.lead", "search_count", fallback_domain))
+
     def post_lead_chatter_note(self, lead_id: int, message: str) -> bool:
         result = self.execute(
             "crm.lead",
